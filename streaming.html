@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/purecss@3.0.0/build/pure-min.css" integrity="sha384-X38yfunGUhNzHpBaEBsWLO+A0HDYOQi8ufWDkZ0k9e0eXz/tH3II7uKZ9msv++Ls" crossorigin="anonymous">
+<title>List of URLs</title>
+</head>
+<body>
+
+<h1>Acceso al programa por streaming local</h1>
+
+<ul id="urlList">
+  <!-- Static list of URLs -->
+  <li><a href="http://localhost:8888/mystream">HLS</a> (<a href="vlc://http://localhost:8888/mystream/index.m3u8">abrir en VLC</a>)</li>
+  <li><a href="srt://localhost:8890?streamid=read:mystream">SRT</a> (<a href="vlc://srt://localhost:8890?streamid=read:mystream">abrir en VLC</a>)</li>
+  <li><a href="http://localhost:8889/mystream">WebRTC</a></li>
+  <li><a href="http://localhost:8889/mystream/whep">WHEP</a></li>
+  <li><a href="rtsp://localhost:8554/mystream">RTSP</a> (<a href="vlc://rtsp://localhost:8554/mystream">abrir en VLC</a>)</li>
+  <li><a href="rtmp://localhost/mystream">RTMP</a> (<a href="vlc://rtmp://localhost/mystream">abrir en VLC</a>)</li>
+</ul>
+
+  <div>
+  <p>
+    Codecs soportados
+  </p>
+  <table>
+    <tr>
+      <td>AV1</td>
+      <td id="av1"></td>
+    </tr>
+    <tr>
+      <td>VP9</td>
+      <td id="vp9"></td>
+    </tr>
+    <tr>
+      <td>H265</td>
+      <td id="h265"></td>
+    </tr>
+    <tr>
+      <td>H264</td>
+      <td id="h264"></td>
+    </tr>
+    <tr>
+      <td>Opus</td>
+      <td id="opus"></td>
+    </tr>
+    <tr>
+      <td>MPEG-4 Audio (AAC)</td>
+      <td id="aac"></td>
+    </tr>
+  </table>
+
+</div>
+<a href="//www.videolan.org/vlc" title="Get VLC media player - It plays, it streams, it kills WiMPs!!">
+    <img src="//www.videolan.org/images/goodies/buttons_getVLC/GetVLC_110.png" width="110" height="45" alt="Get VLC media player" />
+</a>
+<script>
+var newBaseIpAddress = ""
+function loadData() {
+  var textFileUrl = "ipaddress.txt"; // Hardcoded URL of the text file
+  var xhr = new XMLHttpRequest();
+  
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === XMLHttpRequest.DONE) {
+      if (xhr.status === 200) {
+        var data = xhr.responseText;
+        console.log("Data loaded successfully:", data);
+        // Do something with the loaded data, like assign it to a variable
+        processData(data);
+      } else {
+        console.error("Failed to load data:", xhr.status);
+      }
+    }
+  };
+  
+  xhr.open("GET", textFileUrl, true);
+  xhr.send();
+}
+
+function processData(data) {
+  // Here you can process the loaded data
+  console.log("Processing data:", data);
+  // For example, assign it to a variable
+  newBaseIpAddress = data;
+  updateBaseIpAddress();
+  
+}
+// Function to update the base IP address
+function replaceSubstring(originalString, substringToFind, replacementSubstring) {
+  return originalString.split(substringToFind).join(replacementSubstring);
+};
+
+function updateBaseIpAddress() {
+
+  
+
+  var urlListItems = document.querySelectorAll("#urlList li a");
+  urlListItems.forEach(function(item) {
+    var oldUrl = item.getAttribute("href");
+    var newUrl = replaceSubstring(oldUrl, "localhost", newBaseIpAddress);
+    item.setAttribute("href", newUrl);
+  });
+};
+
+document.getElementById("av1").innerHTML = MediaSource.isTypeSupported('video/mp4; codecs="av01.0.08M.08.0.110.01.01.01.1"');
+document.getElementById("vp9").innerHTML = MediaSource.isTypeSupported('video/mp4; codecs="vp09.00.10.08"');
+document.getElementById("h265").innerHTML = MediaSource.isTypeSupported('video/mp4; codecs="hvc1.1.4.L120.B0"');
+document.getElementById("h264").innerHTML = MediaSource.isTypeSupported('video/mp4; codecs="avc1.42c028"');
+document.getElementById("opus").innerHTML = MediaSource.isTypeSupported('video/mp4; codecs="opus"');
+document.getElementById("aac").innerHTML = MediaSource.isTypeSupported('video/mp4; codecs="mp4a.40.2"');
+loadData()
+
+</script>
+
+</body>
+</html>
