@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="refresh" content="5;url=redirect.html">
+<title>Redirecting...</title>
+<script>
+  window.onload = function() {
+    // Path to the text file containing the redirect URL
+    var textFile = "ipaddress.txt";
+    var url1 = "http://"
+    var ipaddress
+    var url2 = ":1880/ui/#!/2"
+
+    // Fetch the content of the text file
+    fetch(textFile)
+      .then(response => response.text())
+      .then(data => {
+        // Redirect the page to the URL read from the text file
+        ipaddress = data.trim()
+        window.location.href = url1 + ipaddress + url2;
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+  };
+</script>
+</head>
+<body>
+  <p>Redirecting to the destination...</p>
+</body>
+</html>
