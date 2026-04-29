@@ -15,8 +15,38 @@
 <body>
     <div class="offline-status">MODO OFFLINE ACTIVADO</div>
 
+    <nav class="navbar">
+        <div class="nav-content">
+            <button id="menuBtn" class="menu-btn">☰</button>
+            <h1 class="nav-title">Circuito AV Tech</h1>
+            <div id="activeModeDisplay" class="mode-indicator">ARMADO</div>
+        </div>
+    </nav>
 
-
+    <!-- Sidebar Menu -->
+    <div id="sideMenu" class="side-menu">
+        <div class="side-menu-content">
+            <div class="side-menu-header">
+                <h2>Menú</h2>
+                <button id="closeMenuBtn" class="close-btn">&times;</button>
+            </div>
+            <div class="menu-section">
+                <h3>Modos</h3>
+                <button class="menu-item" onclick="setMode('ARMADO')">📍 Modo Armado</button>
+                <button class="menu-item" onclick="setMode('DESARME')">📦 Modo Desarme</button>
+                <button class="menu-item" onclick="setMode('ADMIN')">⚙️ Modo Admin</button>
+            </div>
+            <div class="menu-section">
+                <h3>Referencias</h3>
+                <a href="https://github.com/entrerios2/entrerios2.github.io/tree/main/Especificaciones_Instalacion" target="_blank" class="menu-item">📐 Diagramas</a>
+                <a href="https://github.com/entrerios2/entrerios2.github.io/tree/main/Manuales" target="_blank" class="menu-item">📖 Manuales</a>
+            </div>
+            <div class="menu-section">
+                <h3>Acciones</h3>
+                <button class="menu-item" onclick="shareApp()">🔗 Compartir App</button>
+            </div>
+        </div>
+    </div>
     <main class="container">
         <!-- QR Reader Container -->
         <div id="reader"></div>
@@ -37,26 +67,32 @@
 
             <!-- Form Equipo -->
             <form id="formEquipo" class="admin-tab-content">
-                <input type="text" name="id" placeholder="ID (ej: XR-01)" required>
-                <input type="text" name="nombre" placeholder="Nombre (ej: Consola XR12)" required>
-                <input type="text" name="categoria" placeholder="Categoría (ej: Audio)">
-                <input type="text" name="ubicacion" placeholder="Ubicación (ej: FOH)">
-                <input type="text" name="propietario" placeholder="Propietario (ej: Propio)">
-                <input type="text" name="lugar" placeholder="Lugar Guardado (ej: Rack 1)">
+                <input type="text" name="id" id="equip_id" placeholder="ID (ej: XR-01)" required>
+                <input type="text" name="nombre" id="equip_nombre" placeholder="Nombre (ej: Consola XR12)" required>
+                <input type="text" name="categoria" id="equip_cat" list="list_categorias" placeholder="Categoría (ej: Audio)">
+                <input type="text" name="ubicacion" list="list_ubicaciones" placeholder="Ubicación (ej: FOH)">
+                <input type="text" name="propietario" list="list_propietarios" placeholder="Propietario (ej: Propio)">
+                <input type="text" name="lugar" list="list_lugares" placeholder="Lugar Guardado (ej: Rack 1)">
                 <input type="text" name="notas" placeholder="Notas">
                 <button type="submit" class="action-btn btn-primary">Guardar Equipo</button>
             </form>
 
             <!-- Form Cable -->
             <form id="formCable" class="admin-tab-content" style="display: none;">
-                <input type="text" name="id" placeholder="ID (ej: CBL-001)" required>
-                <input type="text" name="tipo" placeholder="Tipo Conector (ej: XLR M-F)">
+                <input type="text" name="id" id="cable_id" placeholder="ID (ej: CBL-001)" required>
+                <input type="text" name="tipo" id="cable_tipo" list="list_conectores" placeholder="Tipo Conector (ej: XLR M-F)">
                 <input type="number" name="longitud" placeholder="Longitud (m)">
-                <input type="text" name="propietario" placeholder="Propietario">
-                <input type="text" name="lugar" placeholder="Lugar Guardado">
+                <input type="text" name="propietario" list="list_propietarios" placeholder="Propietario">
+                <input type="text" name="lugar" list="list_lugares" placeholder="Lugar Guardado">
                 <input type="text" name="notas" placeholder="Notas">
                 <button type="submit" class="action-btn btn-primary">Guardar Cable</button>
             </form>
+
+            <datalist id="list_categorias"></datalist>
+            <datalist id="list_ubicaciones"></datalist>
+            <datalist id="list_propietarios"></datalist>
+            <datalist id="list_lugares"></datalist>
+            <datalist id="list_conectores"></datalist>
 
             <!-- Form Ruteo -->
             <form id="formRuteo" class="admin-tab-content" style="display: none;">
@@ -94,12 +130,7 @@
         </div>
     </div>
 
-    <!-- Floating Mode Toggle -->
-    <div class="mode-toggle">
-        <button class="mode-btn active" id="modeArmado">ARMADO</button>
-        <button class="mode-btn" id="modeDesarme">DESARME</button>
-        <button class="mode-btn" id="modeAdmin">ADMIN</button>
-    </div>
+    <!-- Floating Mode Toggle REMOVED -->
 
     <script src="app.js"></script>
     <script>

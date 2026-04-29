@@ -14,9 +14,10 @@ let html5QrCode = null;
 const searchInput = document.getElementById('searchInput');
 const qrStartBtn = document.getElementById('qrStartBtn');
 const resultsContainer = document.getElementById('resultsContainer');
-const modeArmadoBtn = document.getElementById('modeArmado');
-const modeDesarmeBtn = document.getElementById('modeDesarme');
-const modeAdminBtn = document.getElementById('modeAdmin');
+const activeModeDisplay = document.getElementById('activeModeDisplay');
+const sideMenu = document.getElementById('sideMenu');
+const menuBtn = document.getElementById('menuBtn');
+const closeMenuBtn = document.getElementById('closeMenuBtn');
 const adminPanel = document.getElementById('adminPanel');
 const searchSection = document.querySelector('.search-container');
 const offlineStatus = document.querySelector('.offline-status');
@@ -63,6 +64,7 @@ async function startApp() {
     loadLocalData();
     updateOfflineStatus();
     await fetchData();
+    populateDatalists();
     renderResults();
 }
 
@@ -130,46 +132,77 @@ function findFullRoute(targetId) {
 }
 
 /**
+ * 2.1 Utilidades de Búsqueda
+ */
+function highlightText(text, query) {
+    if (!query) return text;
+    const regex = new RegExp(`(${query})`, 'gi');
+    return text.replace(regex, '<span class="search-highlight">$1</span>');
+}
+
+function getItemById(id) {
+    return [...db.equipos, ...db.cables].find(i => (i.ID_Equipo || i.ID_Cable) === id);
+}
+
+/**
  * 3. Renderizado de Interfaz
  */
-function renderResults() {
+function renderResults(specificId = null) {
     const rawQuery = searchInput.value.trim().toUpperCase();
     resultsContainer.innerHTML = '';
 
-    if (!rawQuery) return;
+    if (!rawQuery && !specificId) return;
 
-    // Filter connections where query matches ID_Origen or ID_Destino
-    // OR search in cables/equipos
-    
-    // Resolver búsqueda por nombre o ID
-    let query = rawQuery;
-    const resolvedItem = [...db.equipos, ...db.cables].find(i => 
-        ((i.ID_Equipo || i.ID_Cable) === rawQuery) || 
-        ((i.Nombre && i.Nombre.toUpperCase().includes(rawQuery)) || 
-         (i.Tipo_Conector && i.Tipo_Conector.toUpperCase().includes(rawQuery)))
-    );
-    if (resolvedItem) {
-        query = resolvedItem.ID_Equipo || resolvedItem.ID_Cable;
+    // Si viene de un clic en coincidencia múltiple
+    if (specificId) {
+        renderDetailView(specificId);
+        return;
     }
 
-    const route = findFullRoute(query);
-    
-    const hasConnections = db.conexiones.some(c => c.ID_Origen === query || c.ID_Destino === query);
-    const itemInfo = resolvedItem || [...db.equipos, ...db.cables].find(i => (i.ID_Equipo || i.ID_Cable) === query);
+    // Buscar coincidencias
+    const matches = [...db.equipos, ...db.cables].filter(item => {
+        const id = (item.ID_Equipo || item.ID_Cable || '').toUpperCase();
+        const nombre = (item.Nombre || item.Tipo_Conector || '').toUpperCase();
+        return id.includes(rawQuery) || nombre.includes(rawQuery);
+    });
 
-    if (!hasConnections && !itemInfo) {
+    if (matches.length === 0) {
         resultsContainer.innerHTML = `<div class="card" style="text-align:center">No se encontró el ID o Nombre "${rawQuery}"</div>`;
         return;
     }
 
-    // Encontrar la conexión principal para obtener el ID_Patch
-    const mainConn = db.conexiones.find(c => c.ID_Origen === query || c.ID_Destino === query);
+    if (matches.length > 1) {
+        // Vista de lista (Coincidencias Múltiples)
+        resultsContainer.innerHTML = `<p style="margin-bottom:1rem; font-size:0.8rem; color:var(--text-secondary)">${matches.length} coincidencias encontradas:</p>`;
+        matches.forEach(item => {
+            const id = item.ID_Equipo || item.ID_Cable;
+            const nombre = item.Nombre || item.Tipo_Conector || '';
+            const card = document.createElement('div');
+            card.className = 'card match-card';
+            card.innerHTML = `
+                <div style="font-weight:700; color:var(--accent-cyan)">${highlightText(id, rawQuery)}</div>
+                <div style="font-size:0.9rem">${highlightText(nombre, rawQuery)}</div>
+            `;
+            card.onclick = () => renderResults(id);
+            resultsContainer.appendChild(card);
+        });
+    } else {
+        // Coincidencia Única
+        renderDetailView(matches[0].ID_Equipo || matches[0].ID_Cable);
+    }
+}
+
+function renderDetailView(id) {
+    const query = id;
+    const itemInfo = getItemById(id);
+    const route = findFullRoute(id);
+    const mainConn = db.conexiones.find(c => c.ID_Origen === id || c.ID_Destino === id);
 
     const card = document.createElement('div');
     card.className = 'card';
 
     // Header logic
-    let headerHTML = `<div class="card-header"><span class="card-id">${query}</span>`;
+    let headerHTML = `<div class="card-header"><span class="card-id">${id}</span>`;
     
     if (currentMode === 'ARMADO') {
         const statusClass = mainConn?.Estado_Instalacion === 'Conectado' ? 'badge-done' : 'badge-pending';
@@ -183,25 +216,24 @@ function renderResults() {
 
     let bodyHTML = '';
     if (currentMode === 'ARMADO') {
-        let detailsHtml = '';
-        if (itemInfo) {
-            const nombre = itemInfo.Nombre || itemInfo.Tipo_Conector || '';
-            const ubicacion = itemInfo.Ubicacion_Uso || (itemInfo.Longitud_m ? `(${itemInfo.Longitud_m}m)` : '');
-            detailsHtml = `<div style="margin-bottom: 1rem; color: #ccc; font-size: 0.9rem;">
-                ${nombre ? `<strong>Detalle:</strong> ${nombre}<br>` : ''}
-                ${ubicacion ? `<strong>Ubicación/Info:</strong> ${ubicacion}` : ''}
-            </div>`;
-        }
-
         bodyHTML = `
-            ${detailsHtml}
             <div class="route-path">
-                ${route.map((id, index) => `
-                    <div class="route-node ${id === query ? 'highlight' : ''}">
-                        <span>${index + 1}.</span> <strong>${id}</strong>
-                    </div>
-                    ${index < route.length - 1 ? '<div class="route-arrow">⬇</div>' : ''}
-                `).join('')}
+                ${route.map((nodeId, index) => {
+                    const nodeInfo = getItemById(nodeId);
+                    const nodeName = nodeInfo ? (nodeInfo.Nombre || nodeInfo.Tipo_Conector || '') : '';
+                    const nodeMeta = nodeInfo ? `${nodeInfo.Propietario || ''} | ${nodeInfo.Lugar_Guardado_Final || ''}` : '';
+                    
+                    return `
+                        <div class="route-node ${nodeId === id ? 'highlight' : ''}">
+                            <div>
+                                <strong>${nodeId}</strong>
+                                ${nodeName ? `<div class="node-metadata" style="font-weight:400">${nodeName}</div>` : ''}
+                                ${nodeMeta ? `<div class="node-metadata">${nodeMeta}</div>` : ''}
+                            </div>
+                        </div>
+                        ${index < route.length - 1 ? '<div class="route-arrow">⬇</div>' : ''}
+                    `;
+                }).join('')}
             </div>
             <button class="action-btn btn-primary" onclick="handleUpdatePatch('${mainConn?.ID_Patch}')" ${!mainConn ? 'disabled' : ''}>
                 Marcar como Conectado
@@ -219,7 +251,7 @@ function renderResults() {
                 <p><small>Guardar en:</small> <strong>${storage}</strong></p>
             </div>
             <button class="action-btn ${isOwn ? 'btn-success' : 'btn-warning'}" 
-                    onclick="handleUpdateLogistica('${query}', '${isOwn ? 'Guardado' : 'Devuelto'}')">
+                    onclick="handleUpdateLogistica('${id}', '${isOwn ? 'Guardado' : 'Devuelto'}')">
                 Marcar como ${isOwn ? 'Guardado' : 'Devuelto'}
             </button>
         `;
@@ -264,7 +296,54 @@ function updateSelects() {
     selDestino.innerHTML = placeholder + options;
 }
 
+function populateDatalists() {
+    const lists = {
+        'list_categorias': new Set(db.equipos.map(e => e.Categoria)),
+        'list_ubicaciones': new Set(db.equipos.map(e => e.Ubicacion_Uso)),
+        'list_propietarios': new Set([...db.equipos, ...db.cables].map(i => i.Propietario)),
+        'list_lugares': new Set([...db.equipos, ...db.cables].map(i => i.Lugar_Guardado_Final)),
+        'list_conectores': new Set(db.cables.map(c => c.Tipo_Conector))
+    };
+
+    for (const [id, values] of Object.entries(lists)) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        el.innerHTML = Array.from(values).filter(v => v).map(v => `<option value="${v}">`).join('');
+    }
+}
+
+function autoGenerateId(formType) {
+    let prefix = '';
+    if (formType === 'equipo') {
+        const cat = document.getElementById('equip_cat').value.substring(0, 3).toUpperCase();
+        const nom = document.getElementById('equip_nombre').value.substring(0, 3).toUpperCase();
+        if (cat && nom) prefix = `${cat}-${nom}`;
+    } else {
+        const tip = document.getElementById('cable_tipo').value.substring(0, 3).toUpperCase();
+        if (tip) prefix = `CBL-${tip}`;
+    }
+
+    if (!prefix) return;
+
+    const existing = [...db.equipos, ...db.cables].filter(i => (i.ID_Equipo || i.ID_Cable || '').startsWith(prefix));
+    let max = 0;
+    existing.forEach(i => {
+        const num = parseInt((i.ID_Equipo || i.ID_Cable).split('-').pop());
+        if (!isNaN(num) && num > max) max = num;
+    });
+
+    const newId = `${prefix}-${String(max + 1).padStart(3, '0')}`;
+    const targetInput = formType === 'equipo' ? document.getElementById('equip_id') : document.getElementById('cable_id');
+    if (targetInput && !targetInput.value.includes(prefix)) {
+        targetInput.value = newId;
+    }
+}
+
 // Handlers de Formularios
+document.getElementById('equip_cat')?.addEventListener('input', () => autoGenerateId('equipo'));
+document.getElementById('equip_nombre')?.addEventListener('input', () => autoGenerateId('equipo'));
+document.getElementById('cable_tipo')?.addEventListener('input', () => autoGenerateId('cable'));
+
 document.getElementById('formEquipo')?.addEventListener('submit', (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -413,7 +492,49 @@ async function syncQueue() {
 /**
  * 5. Event Listeners y Utilidades
  */
-searchInput.addEventListener('input', renderResults);
+function setMode(mode) {
+    currentMode = mode;
+    activeModeDisplay.innerText = mode;
+    sideMenu.classList.remove('active');
+    
+    if (mode === 'ADMIN') {
+        adminPanel.style.display = 'block';
+        searchSection.style.display = 'none';
+        resultsContainer.style.display = 'none';
+    } else {
+        adminPanel.style.display = 'none';
+        searchSection.style.display = 'flex';
+        resultsContainer.style.display = 'block';
+        renderResults();
+    }
+}
+
+function shareApp() {
+    const url = new URL(window.location.origin + window.location.pathname);
+    const gasUrl = localStorage.getItem('gas_api_url');
+    if (gasUrl) {
+        const id = gasUrl.split('/s/')[1].split('/exec')[0];
+        url.searchParams.set('gas_id', id);
+    }
+    
+    const finalUrl = url.toString();
+    
+    if (navigator.share) {
+        navigator.share({
+            title: 'Circuito AV Tech',
+            text: 'Accede a la base de datos de montaje AV',
+            url: finalUrl
+        }).catch(console.error);
+    } else {
+        navigator.clipboard.writeText(finalUrl);
+        alert('URL copiada al portapapeles: ' + finalUrl);
+    }
+}
+
+// Sidebar listeners
+menuBtn.addEventListener('click', () => sideMenu.classList.add('active'));
+closeMenuBtn.addEventListener('click', () => sideMenu.classList.remove('active'));
+window.addEventListener('click', (e) => { if (e.target === sideMenu) sideMenu.classList.remove('active'); });
 
 qrStartBtn.addEventListener('click', () => {
     const readerDiv = document.getElementById('reader');
@@ -441,38 +562,7 @@ qrStartBtn.addEventListener('click', () => {
     });
 });
 
-modeArmadoBtn.addEventListener('click', () => {
-    currentMode = 'ARMADO';
-    modeArmadoBtn.classList.add('active');
-    modeDesarmeBtn.classList.remove('active');
-    modeAdminBtn.classList.remove('active');
-    adminPanel.style.display = 'none';
-    searchSection.style.display = 'flex';
-    resultsContainer.style.display = 'block';
-    renderResults();
-});
-
-modeDesarmeBtn.addEventListener('click', () => {
-    currentMode = 'DESARME';
-    modeDesarmeBtn.classList.add('active');
-    modeArmadoBtn.classList.remove('active');
-    modeAdminBtn.classList.remove('active');
-    adminPanel.style.display = 'none';
-    searchSection.style.display = 'flex';
-    resultsContainer.style.display = 'block';
-    renderResults();
-});
-
-modeAdminBtn.addEventListener('click', () => {
-    currentMode = 'ADMIN';
-    modeAdminBtn.classList.add('active');
-    modeArmadoBtn.classList.remove('active');
-    modeDesarmeBtn.classList.remove('active');
-    
-    adminPanel.style.display = 'block';
-    searchSection.style.display = 'none';
-    resultsContainer.style.display = 'none';
-});
+searchInput.addEventListener('input', renderResults);
 
 window.addEventListener('online', () => {
     updateOfflineStatus();

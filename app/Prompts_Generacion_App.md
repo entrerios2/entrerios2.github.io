@@ -60,3 +60,30 @@ Copia y pega los siguientes prompts en tu nuevo agente para generar el código s
 > 3. **Autocompletado Inteligente:** El formulario de "Cargar Ruteo" NO debe tener inputs de texto libre para el `ID_Origen` y `ID_Destino`. Debe tener listas desplegables (`<select>`) que se autocompleten iterando `db.equipos` y `db.cables` (mostrando el ID). Esto evitará errores de tipeo al armar el grafo.
 > 4. **Integración Offline:** Al darle "Guardar", empaqueta el JSON y hacé el `fetch` POST. Si el celular no tiene internet, reutiliza tu lógica de `offline_queue` para guardar este alta y mandarla cuando vuelva la conexión.
 > 5. **Reactividad:** Actualiza el estado local (`db`) instantáneamente agregando el nuevo objeto al array que corresponda, para que el nuevo equipo o cable aparezca en el buscador sin necesidad de recargar la página completa.
+
+---
+
+### PROMPT 4: Mejoras UX/UI y Menú de Navegación Avanzado
+*Copiá este texto y pasáselo a tu agente para que reestructure la UI según lo que planificamos.*
+
+> **Actúa sobre el código de la SPA (`index.html`, `app.js` y CSS asociado) que estamos desarrollando.**
+> Necesito implementar las siguientes 5 mejoras de Interfaz de Usuario y Experiencia:
+> 
+> **1. Búsqueda con Coincidencias Múltiples:**
+> Modifica `renderResults()` para usar `filter()` en lugar de `find()`. Si la búsqueda devuelve más de 1 coincidencia, no muestres la ruta directamente. En su lugar, muestra una lista de "tarjetas de solo texto" donde se resalte (ej: en amarillo o negrita) la parte del nombre o ID que coincidió con la búsqueda. Al hacer clic en una de estas tarjetas, debe ejecutar la vista detallada (ruta completa) para ese ítem específico.
+> 
+> **2. Tarjetas de Ruta Detallada:**
+> En la vista del Modo Armado, dentro del ciclo que renderiza el grafo de la ruta, busca la información completa del nodo (Nombre, Propietario, Lugar, Estado) y muéstrala en texto más pequeño (como metadatos) debajo de cada ID en el recorrido.
+> 
+> **3. Nuevo Sistema de Navegación (Menú Hamburguesa):**
+> Elimina por completo los botones inferiores estáticos de "Armado/Desarme/Admin". Crea un Navbar en la parte superior con un "Menú Hamburguesa". Al presionarlo, despliega un panel lateral o modal que contenga:
+> - **Modos:** Armado, Desarme, Admin.
+> - **Referencias (Diagramas):** Enlace que abra `https://github.com/entrerios2/entrerios2.github.io/tree/main/Especificaciones_Instalacion` en otra pestaña.
+> - **Referencias (Manuales):** Enlace que abra `https://github.com/entrerios2/entrerios2.github.io/tree/main/Manuales` en otra pestaña.
+> - **Compartir App:** Botón que intente usar `navigator.share()` (Web Share API) o copie al portapapeles la URL inyectando dinámicamente el parámetro `?gas_id=...` para que otras personas puedan entrar directo a la base actual.
+> 
+> **4. Comboboxes (Listas Desplegables Inteligentes) en Admin:**
+> Usa etiquetas `<datalist>` de HTML5 en los campos de Categoría, Tipo de Conector, Propietario, Ubicación y Lugar de Guardado. Crea una función `populateDatalists()` en JS que extraiga valores únicos de la base de datos (usando `Set`) e inyecte `<option>`s en cada datalist. Esto permitirá escribir algo nuevo o autocompletar.
+> 
+> **5. Generación Automática de IDs Secuenciales:**
+> Agrega un escuchador de eventos a los campos Categoría, Tipo y Nombre. Al escribir, extrae las primeras letras para armar una nomenclatura en mayúsculas (Ej: `CAT-TIP-ELE`). Busca en tu estado global (`db`) cuál es el mayor número registrado para ese prefijo exacto, súmale 1 y mételo automáticamente en el input `ID` (ej: `CAT-TIP-ELE-002`). Debe poder editarse manualmente si el usuario no lo quiere.

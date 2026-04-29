@@ -101,6 +101,7 @@ function getSheetDataJSON(sheetName) {
 
 /**
  * Busca un ID en una columna y actualiza el valor en otra columna de la misma fila.
+ * Versión robusta: tolerante a espacios, mayúsculas/minúsculas y tipos (001 vs 1).
  */
 function updateRowValue(sheetName, idColumnName, idValue, targetColumnName, newValue) {
   const sheet = SS.getSheetByName(sheetName);
@@ -113,10 +114,24 @@ function updateRowValue(sheetName, idColumnName, idValue, targetColumnName, newV
 
   if (idIndex === -1 || targetIndex === -1) return false;
 
+  const searchStr = String(idValue).trim().toLowerCase();
+
   for (let i = 1; i < data.length; i++) {
-    if (data[i][idIndex].toString() === idValue.toString()) {
+    const rawCellValue = data[i][idIndex];
+    const cellStr = String(rawCellValue).trim().toLowerCase();
+    
+    // Comparación 1: Texto normalizado (ej: "CBL-01" === "cbl-01")
+    if (cellStr === searchStr) {
       sheet.getRange(i + 1, targetIndex + 1).setValue(newValue);
       return true;
+    }
+
+    // Comparación 2: Equivalencia numérica (ej: 1 === "001")
+    if (rawCellValue !== "" && idValue !== "" && !isNaN(rawCellValue) && !isNaN(idValue)) {
+      if (Number(rawCellValue) === Number(idValue)) {
+        sheet.getRange(i + 1, targetIndex + 1).setValue(newValue);
+        return true;
+      }
     }
   }
   return false;
