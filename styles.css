@@ -548,6 +548,148 @@ input[type="text"]:focus {
   justify-content: center;
 }
 
+/* Desktop Wrapper */
+.desktop-wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Tables Admin */
+.table-responsive {
+  overflow-x: auto;
+  background: var(--card-bg);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  margin-top: 1rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+th, td {
+  padding: 0.8rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+th {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+th:hover {
+  color: var(--accent-cyan);
+}
+
+tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+/* Interactive Tree */
+.tree-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 0;
+}
+
+.tree-node {
+  width: 100%;
+  max-width: 400px;
+  padding: 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.tree-node.central {
+  border: 2px solid var(--accent-cyan);
+  box-shadow: 0 0 20px rgba(0, 242, 255, 0.1);
+}
+
+.tree-node h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.tree-node .badge-id {
+  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+.branch-selector {
+  width: 100%;
+  margin-top: 0.5rem;
+  background: #000;
+  color: var(--accent-cyan);
+  border: 1px solid var(--accent-cyan);
+  font-size: 0.8rem;
+  padding: 0.3rem;
+  border-radius: 4px;
+}
+
+/* Connection Arrows */
+.connection-jump {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.5rem 0;
+}
+
+.arrow-line {
+  width: 2px;
+  height: 40px;
+  background: var(--text-secondary);
+}
+
+.arrow-line.connected {
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success);
+}
+
+.arrow-line.pending {
+  background: transparent;
+  border-left: 2px dashed #333;
+}
+
+.connection-info {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  background: var(--bg-color);
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+/* Icons */
+.material-icons {
+  vertical-align: middle;
+  line-height: 1;
+}
+
 /* Offline Indicator */
 .offline-status {
   background: var(--danger);
@@ -558,7 +700,7 @@ input[type="text"]:focus {
   position: fixed;
   top: 0;
   width: 100%;
-  z-index: 2000;
+  z-index: 3000;
   display: none;
 }
 

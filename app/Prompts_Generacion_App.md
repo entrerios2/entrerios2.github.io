@@ -111,3 +111,51 @@ Copia y pega los siguientes prompts en tu nuevo agente para generar el código s
 >   - **Centro:** Información estética o ícono del equipo.
 >   - **Columna Derecha (SALIDAS):** Busca en `db.conexiones` donde `ID_Origen === id`. Lista cada coincidencia mostrando: El `Puerto_Origen` de salida, el `Tipo_Senial`, y el `ID_Destino` (clickeable para saltar hacia allá).
 > - De esta forma, el usuario verá al equipo en el centro, y a los lados todas sus ramas entrantes y salientes, pudiendo navegar por todo el diagrama paso a paso.
+
+---
+
+### PROMPT 6: Actualización de Backend (Modo Edición - CRUD)
+*Pasale este prompt al agente para enseñarle a tu Google Apps Script a actualizar filas.*
+
+> **Actúa como un experto en Google Apps Script.**
+> Necesito actualizar el archivo `Code.gs` de mi API REST para permitir la edición de filas existentes, completando así las operaciones CRUD.
+> 
+> **Requisitos:**
+> 1. Modifica la función `doPost(e)` para aceptar tres nuevas acciones: `EDIT_EQUIPO`, `EDIT_CABLE`, y `EDIT_CONEXION`.
+> 2. Implementa una función de ayuda (helper) que busque en una solapa específica ("1_Equipos", "2_Cables" o "3_Conexiones") iterando las filas hasta encontrar el ID coincidente (usando la misma lógica robusta de comparación de strings que usamos en `UPDATE_LOGISTICA` limpiando espacios).
+> 3. Una vez encontrada la fila del ID, debes sobrescribir toda esa fila (usando `getRange(row, 1, 1, data.length).setValues([data])`) con el array de datos nuevos recibidos en el JSON.
+> 4. Devuelve un JSON de éxito o de error si el ID no se encontró.
+> 
+> Entrégame únicamente las modificaciones necesarias a `Code.gs`.
+
+---
+
+### PROMPT 7: Frontend - Árbol Interactivo, Tablas Admin y Desktop
+*Copiá este texto y pasáselo a tu agente para rediseñar la UI, el modo Admin y el ruteo interactivo.*
+
+> **Actúa sobre el código de la SPA (`index.html`, `app.js` y `styles.css`).**
+> Necesito implementar una refactorización masiva en la Interfaz de Usuario para tener un Modo Admin tipo CRUD, diseño para monitores y un árbol de conexiones inteligente.
+> 
+> **1. Modo Admin Centralizado (Tablas y Edición):**
+> En `index.html`, cambia las pestañas "Cargar..." por "Gestión de Equipos", "Gestión de Cables", "Gestión de Ruteo".
+> Dentro de cada pestaña, el contenido principal debe ser una Tabla HTML con scroll horizontal (`overflow-x: auto`) que liste todos los elementos iterando tu variable global `db`.
+> Haz que haciendo clic en el `<th>` de las columnas, los datos de la tabla se ordenen alfabéticamente.
+> Encima de la tabla, pon un botón `[+ Nuevo Elemento]` que expanda el formulario de carga original.
+> En la tabla, agrega una columna "Acciones" con un botón `[Editar]`. Al hacer clic, el formulario debe rellenarse con los datos de esa fila, el botón debe decir "Actualizar", y al enviarse debe hacer un `fetch` POST con la acción `EDIT_EQUIPO`, `EDIT_CABLE` o `EDIT_CONEXION` según corresponda. Actualiza el estado local (`db`) tras el éxito.
+> 
+> **2. Diseño Desktop y Material Icons:**
+> En `styles.css`, envuelve el contenido principal en un contenedor de ancho máximo (ej. `max-width: 900px; margin: 0 auto;`) para que en Desktop (PC) la interfaz no se estire de borde a borde.
+> Reemplaza los emojis del DOM por Google Material Icons: `speaker` para equipos, `cable` para cables, `route` para conexiones.
+> 
+> **3. Jerarquía Visual en la Ficha del Equipo:**
+> Cuando un ítem esté seleccionado (centro de atención), su **Nombre o Descripción** debe ser el `<h2>` principal. Su ID será secundario (un badge pequeño). Muestra **Toda la información disponible** de la base de datos para ese ítem central (propietario, lugar, notas, etc.).
+> 
+> **4. Recuperación del Árbol Interactivo (Bifurcaciones):**
+> Al buscar un elemento, traza la ruta completa hacia atrás y adelante. Dibújala como una línea vertical. En los nodos del árbol que NO son el central, muestra menos info: solo ID, Categoría, Ubicación y Estado.
+> **Bifurcaciones:** Si el algoritmo detecta que un equipo tiene múltiples salidas o entradas (Ej: Consola hacia Amp 1 y Amp 2), no dibujes múltiples ramas en paralelo. Dibuja un `<select>` nativo en ese nodo del árbol que diga "Ruta por: [Amp 1 ▼]". Al cambiar el `<select>`, recalcula y redibuja dinámicamente la continuación del árbol.
+> 
+> **5. Semáforo y Botones de Conexión:**
+> En cada salto (flecha de conexión) del árbol, muestra el Puerto de Origen, Destino y Tipo de Señal. 
+> Agrega un botón "Conectar" / "Desconectar" que envíe un POST `UPDATE_PATCH`. 
+> Si esa conexión está "Conectado", pinta el bloque o flecha de **Verde sólido**. Si es "Pendiente", de **Gris oscuro punteado**. Esto dará feedback visual instantáneo del progreso.
+

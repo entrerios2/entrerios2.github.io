@@ -7,7 +7,10 @@ let API_URL = "";
 
 // State
 let db = { equipos: [], cables: [], conexiones: [] };
-let currentMode = 'ARMADO'; // 'ARMADO' or 'DESARME'
+let currentMode = 'ARMADO'; 
+let offlineQueue = JSON.parse(localStorage.getItem('av_tech_queue') || '[]');
+let currentSort = { type: '', column: '', direction: 'asc' };
+let selectedBranches = {}; // nodeId -> choiceId (for tree navigation)
 let html5QrCode = null;
 
 // DOM Elements
@@ -19,6 +22,10 @@ const sideMenu = document.getElementById('sideMenu');
 const menuBtn = document.getElementById('menuBtn');
 const closeMenuBtn = document.getElementById('closeMenuBtn');
 const adminPanel = document.getElementById('adminPanel');
+const adminTableHead = document.getElementById('adminTableHead');
+const adminTableBody = document.getElementById('adminTableBody');
+const adminFormContainer = document.getElementById('adminFormContainer');
+const formContainerInner = document.getElementById('formContainerInner');
 const searchSection = document.querySelector('.search-container');
 const offlineStatus = document.querySelector('.offline-status');
 
@@ -151,19 +158,16 @@ function renderResults(specificId = null) {
     const rawQuery = searchInput.value.trim().toUpperCase();
     resultsContainer.innerHTML = '';
 
-    // Si el buscador está vacío y no hay ID específico, mostrar inventario
     if (!rawQuery && !specificId) {
         renderInventory();
         return;
     }
 
-    // Si viene de un clic en coincidencia múltiple o inventario
     if (specificId) {
-        renderDetailView(specificId);
+        renderTree(specificId);
         return;
     }
 
-    // Buscar coincidencias
     const matches = [...db.equipos, ...db.cables].filter(item => {
         const id = (item.ID_Equipo || item.ID_Cable || '').toUpperCase();
         const nombre = (item.Nombre || item.Tipo_Conector || '').toUpperCase();
@@ -171,179 +175,375 @@ function renderResults(specificId = null) {
     });
 
     if (matches.length === 0) {
-        resultsContainer.innerHTML = `<div class="card" style="text-align:center">No se encontró el ID o Nombre "${rawQuery}"</div>`;
+        resultsContainer.innerHTML = `<div class="card" style="text-align:center">No se encontró "${rawQuery}"</div>`;
         return;
     }
 
     if (matches.length > 1) {
-        // Vista de lista (Coincidencias Múltiples)
-        resultsContainer.innerHTML = `<p style="margin-bottom:1rem; font-size:0.8rem; color:var(--text-secondary)">${matches.length} coincidencias encontradas:</p>`;
+        resultsContainer.innerHTML = `<p style="margin-bottom:1rem; font-size:0.8rem; color:var(--text-secondary)">${matches.length} coincidencias:</p>`;
         matches.forEach(item => {
             const id = item.ID_Equipo || item.ID_Cable;
             const nombre = item.Nombre || item.Tipo_Conector || '';
+            const isCable = id.startsWith('CBL');
             const card = document.createElement('div');
             card.className = 'card match-card';
             card.innerHTML = `
-                <div style="font-weight:700; color:var(--accent-cyan)">${highlightText(id, rawQuery)}</div>
-                <div style="font-size:0.9rem">${highlightText(nombre, rawQuery)}</div>
+                <div style="display:flex; align-items:center; gap:10px">
+                    <span class="material-icons" style="color:var(--accent-cyan)">${isCable ? 'cable' : 'speaker'}</span>
+                    <div>
+                        <div style="font-weight:700; color:var(--accent-cyan)">${highlightText(id, rawQuery)}</div>
+                        <div style="font-size:0.9rem">${highlightText(nombre, rawQuery)}</div>
+                    </div>
+                </div>
             `;
             card.onclick = () => renderResults(id);
             resultsContainer.appendChild(card);
         });
     } else {
-        // Coincidencia Única
-        renderDetailView(matches[0].ID_Equipo || matches[0].ID_Cable);
+        renderTree(matches[0].ID_Equipo || matches[0].ID_Cable);
     }
 }
 
-function renderInventory() {
-    resultsContainer.innerHTML = '<div class="inventory-section"></div>';
-    const container = resultsContainer.querySelector('.inventory-section');
+function renderTree(centralId) {
+    resultsContainer.innerHTML = '';
+    const container = document.createElement('div');
+    container.className = 'tree-container';
 
-    const sections = [
-        { title: 'Equipos', data: db.equipos, idKey: 'ID_Equipo', icon: 'settings_input_component' },
-        { title: 'Cables', data: db.cables, idKey: 'ID_Cable', icon: 'settings_input_hdmi' }
-    ];
-
-    sections.forEach(section => {
-        if (section.data.length === 0) return;
-
-        const group = document.createElement('div');
-        group.className = 'inventory-group';
-        group.innerHTML = `<h3><span class="material-icons" style="font-size:1rem; vertical-align:middle; margin-right:5px">${section.icon}</span> ${section.title}</h3>`;
-
-        section.data.forEach(item => {
-            const id = item[section.idKey];
-            const nombre = item.Nombre || item.Tipo_Conector || 'S/D';
-            
-            const itemEl = document.createElement('div');
-            itemEl.className = 'inventory-item';
-            itemEl.innerHTML = `
-                <div>
-                    <div class="item-id">${id}</div>
-                    <div class="item-info">${nombre}</div>
-                </div>
-                <span class="material-icons" style="color:var(--text-secondary)">chevron_right</span>
-            `;
-            itemEl.onclick = () => renderResults(id);
-            group.appendChild(itemEl);
-        });
-        container.appendChild(group);
+    // 1. Trace Backwards (Parents)
+    const parents = tracePath(centralId, 'back');
+    parents.reverse().forEach(p => {
+        container.appendChild(renderTreeNode(p.id, false));
+        container.appendChild(renderTreeConnection(p.conn, 'down'));
     });
+
+    // 2. Central Node
+    container.appendChild(renderTreeNode(centralId, true));
+
+    // 3. Trace Forwards (Children)
+    const children = tracePath(centralId, 'forward');
+    children.forEach(c => {
+        container.appendChild(renderTreeConnection(c.conn, 'down'));
+        container.appendChild(renderTreeNode(c.id, false));
+    });
+
+    resultsContainer.appendChild(container);
 }
 
-function clearSearch() {
-    searchInput.value = '';
-    renderResults();
+function tracePath(startId, direction) {
+    const path = [];
+    let currentId = startId;
+    const visited = new Set([startId]);
+
+    while (true) {
+        const conns = direction === 'forward' 
+            ? db.conexiones.filter(c => c.ID_Origen === currentId)
+            : db.conexiones.filter(c => c.ID_Destino === currentId);
+
+        if (conns.length === 0) break;
+
+        // Si hay bifurcación, elegir la seleccionada o la primera
+        let chosen = conns[0];
+        if (conns.length > 1) {
+            const saved = selectedBranches[`${currentId}_${direction}`];
+            chosen = conns.find(c => (direction === 'forward' ? c.ID_Destino : c.ID_Origen) === saved) || conns[0];
+        }
+
+        const nextId = direction === 'forward' ? chosen.ID_Destino : chosen.ID_Origen;
+        if (visited.has(nextId)) break;
+
+        path.push({ id: nextId, conn: chosen });
+        visited.add(nextId);
+        currentId = nextId;
+    }
+    return path;
 }
 
-function renderDetailView(id) {
-    const itemInfo = getItemById(id);
-    const inputs = db.conexiones.filter(c => c.ID_Destino === id);
-    const outputs = db.conexiones.filter(c => c.ID_Origen === id);
-
-    const card = document.createElement('div');
-    card.className = 'card';
-
-    // Header logic: Back button + ID
-    const headerHTML = `
-        <div class="back-header">
-            <button class="back-btn" onclick="clearSearch()">
-                <span class="material-icons">arrow_back</span>
-            </button>
-            <div>
-                <span class="card-id" style="font-size:1.4rem">${id}</span>
-                <div class="node-metadata">${itemInfo?.Nombre || itemInfo?.Tipo_Conector || ''}</div>
-            </div>
-        </div>
-    `;
-
-    // Center Icon logic
+function renderTreeNode(id, isCentral) {
+    const info = getItemById(id);
     const isCable = id.startsWith('CBL');
-    const centerIcon = isCable ? 'settings_input_hdmi' : 'settings_input_component';
+    const el = document.createElement('div');
+    el.className = `tree-node ${isCentral ? 'central' : ''}`;
 
-    // Grid: Inputs | Center | Outputs
-    const bodyHTML = `
-        <div class="node-grid">
-            <!-- Columna Izquierda: ENTRADAS -->
-            <div class="node-column">
-                <h4>Entradas</h4>
-                ${inputs.length > 0 ? inputs.map(c => `
-                    <div class="conn-item">
-                        <span class="conn-port">${c.Puerto_Destino || 'Input'}</span>
-                        <span class="conn-type">${c.Tipo_Senial || ''}</span>
-                        <div class="jump-btn" onclick="renderResults('${c.ID_Origen}')">
-                            <span class="material-icons">link</span> ${c.ID_Origen}
-                        </div>
-                    </div>
-                `).join('') : '<p style="text-align:center; font-size:0.8rem; color:var(--text-secondary)">Sin entradas</p>'}
+    if (isCentral) {
+        el.innerHTML = `
+            <div class="back-header" style="margin-bottom:10px">
+                <button class="back-btn" onclick="clearSearch()"><span class="material-icons">arrow_back</span></button>
+                <span class="badge-id">${id}</span>
             </div>
-
-            <!-- Centro: Equipo -->
-            <div class="node-center">
-                <span class="material-icons">${centerIcon}</span>
-                <div style="font-size:0.7rem; margin-top:5px; color:var(--accent-cyan); font-weight:700">
-                    ${currentMode}
+            <h2>${info?.Nombre || info?.Tipo_Conector || 'Sin Nombre'}</h2>
+            <div class="node-metadata" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:0.8rem">
+                <div><strong>Propietario:</strong> ${info?.Propietario || 'S/D'}</div>
+                <div><strong>Ubicación:</strong> ${info?.Ubicacion_Uso || 'S/D'}</div>
+                <div><strong>Lugar:</strong> ${info?.Lugar_Guardado_Final || 'S/D'}</div>
+                <div><strong>Estado:</strong> ${info?.Estado_Logistica || 'S/D'}</div>
+            </div>
+            ${info?.Notas ? `<div class="node-metadata" style="margin-top:10px; border-top:1px solid #333; padding-top:5px"><em>${info.Notas}</em></div>` : ''}
+        `;
+    } else {
+        el.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center">
+                <div style="cursor:pointer" onclick="renderResults('${id}')">
+                    <span class="badge-id">${id}</span>
+                    <div style="font-size:0.85rem; font-weight:600">${info?.Nombre || info?.Tipo_Conector || ''}</div>
+                    <div class="node-metadata" style="font-size:0.7rem">${info?.Ubicacion_Uso || ''} | ${info?.Estado_Logistica || ''}</div>
                 </div>
+                <span class="material-icons" style="color:var(--text-secondary)">${isCable ? 'cable' : 'speaker'}</span>
             </div>
+        `;
+    }
 
-            <!-- Columna Derecha: SALIDAS -->
-            <div class="node-column">
-                <h4>Salidas</h4>
-                ${outputs.length > 0 ? outputs.map(c => `
-                    <div class="conn-item">
-                        <span class="conn-port">${c.Puerto_Origen || 'Output'}</span>
-                        <span class="conn-type">${c.Tipo_Senial || ''}</span>
-                        <div class="jump-btn" onclick="renderResults('${c.ID_Destino}')">
-                            ${c.ID_Destino} <span class="material-icons">link</span>
-                        </div>
-                        ${currentMode === 'ARMADO' ? `
-                            <div style="margin-top:5px; border-top:1px solid var(--border-color); padding-top:5px">
-                                <span class="badge ${c.Estado_Instalacion === 'Conectado' ? 'badge-done' : 'badge-pending'}" 
-                                      style="cursor:pointer; font-size:0.6rem" 
-                                      onclick="handleUpdatePatch('${c.ID_Patch}')">
-                                    ${c.Estado_Instalacion}
-                                </span>
-                            </div>
-                        ` : ''}
-                    </div>
-                `).join('') : '<p style="text-align:center; font-size:0.8rem; color:var(--text-secondary)">Sin salidas</p>'}
-            </div>
+    // Bifurcations check
+    const outputs = db.conexiones.filter(c => c.ID_Origen === id);
+    const inputs = db.conexiones.filter(c => c.ID_Destino === id);
+
+    if (outputs.length > 1) {
+        el.appendChild(renderBranchSelector(id, outputs, 'forward'));
+    }
+    if (inputs.length > 1) {
+        el.appendChild(renderBranchSelector(id, inputs, 'back'));
+    }
+
+    return el;
+}
+
+function renderBranchSelector(nodeId, conns, direction) {
+    const sel = document.createElement('select');
+    sel.className = 'branch-selector';
+    const currentChoice = selectedBranches[`${nodeId}_${direction}`];
+    
+    sel.innerHTML = conns.map(c => {
+        const targetId = direction === 'forward' ? c.ID_Destino : c.ID_Origen;
+        const port = direction === 'forward' ? c.Puerto_Origen : c.Puerto_Destino;
+        return `<option value="${targetId}" ${targetId === currentChoice ? 'selected' : ''}>Ruta por: ${port} (${targetId})</option>`;
+    }).join('');
+
+    sel.onchange = (e) => {
+        selectedBranches[`${nodeId}_${direction}`] = e.target.value;
+        const centralId = document.querySelector('.tree-node.central .badge-id').innerText;
+        renderTree(centralId);
+    };
+    return sel;
+}
+
+function renderTreeConnection(conn, direction) {
+    const isConnected = conn.Estado_Instalacion === 'Conectado';
+    const el = document.createElement('div');
+    el.className = 'connection-jump';
+    el.innerHTML = `
+        <div class="connection-info">
+            ${conn.Puerto_Origen} <span class="material-icons" style="font-size:0.8rem">arrow_downward</span> ${conn.Puerto_Destino}
+            <span style="margin-left:5px; color:var(--text-secondary)">(${conn.Tipo_Senial})</span>
         </div>
-
-        ${currentMode === 'DESARME' ? `
-            <div class="card" style="margin-top:1.5rem; background:rgba(255,255,255,0.02)">
-                <p><small>Propietario:</small> <strong>${itemInfo?.Propietario || 'Desconocido'}</strong></p>
-                <p><small>Guardar en:</small> <strong>${itemInfo?.Lugar_Guardado_Final || 'S/D'}</strong></p>
-                <button class="action-btn btn-primary" style="margin-top:10px" 
-                        onclick="handleUpdateLogistica('${id}', '${itemInfo?.Propietario?.toLowerCase().includes('propio') ? 'Guardado' : 'Devuelto'}')">
-                    Marcar Logística
-                </button>
-            </div>
-        ` : ''}
+        <div class="arrow-line ${isConnected ? 'connected' : 'pending'}" 
+             style="cursor:pointer" title="Cambiar estado" 
+             onclick="togglePatch('${conn.ID_Patch}')"></div>
     `;
+    return el;
+}
 
-    card.innerHTML = headerHTML + bodyHTML;
-    resultsContainer.appendChild(card);
+async function togglePatch(idPatch) {
+    const conn = db.conexiones.find(c => c.ID_Patch === idPatch);
+    if (!conn) return;
+
+    const newState = conn.Estado_Instalacion === 'Conectado' ? 'Pendiente' : 'Conectado';
+    await handleAction('EDIT_CONEXION', { id_patch: idPatch, Estado_Instalacion: newState });
+    
+    // Refresh UI
+    const centralId = document.querySelector('.tree-node.central .badge-id').innerText;
+    renderTree(centralId);
 }
 
 /**
  * 3.1 Funciones de Administración
  */
 function showAdminTab(tabId, btn) {
-    document.querySelectorAll('.admin-tab-content').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    
     if (btn) btn.classList.add('active');
     
-    if (tabId === 'tabEquipo') {
-        document.getElementById('formEquipo').style.display = 'flex';
-    } else if (tabId === 'tabCable') {
-        document.getElementById('formCable').style.display = 'flex';
-    } else if (tabId === 'tabRuteo') {
-        document.getElementById('formRuteo').style.display = 'flex';
-        updateSelects();
+    // Reset form
+    adminFormContainer.style.display = 'none';
+    formContainerInner.innerHTML = '';
+    
+    const type = tabId === 'tabEquipo' ? 'equipos' : (tabId === 'tabCable' ? 'cables' : 'conexiones');
+    renderAdminTable(type);
+    updateSelects();
+}
+
+function renderAdminTable(type) {
+    currentSort.type = type;
+    const data = [...db[type]];
+    
+    if (currentSort.column) {
+        data.sort((a, b) => {
+            const valA = String(a[currentSort.column]).toLowerCase();
+            const valB = String(b[currentSort.column]).toLowerCase();
+            return currentSort.direction === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        });
     }
+
+    const headers = {
+        equipos: ['ID_Equipo', 'Nombre', 'Categoria', 'Ubicacion_Uso', 'Estado_Logistica'],
+        cables: ['ID_Cable', 'Tipo_Conector', 'Longitud_m', 'Estado_Logistica'],
+        conexiones: ['ID_Patch', 'ID_Origen', 'Puerto_Origen', 'ID_Destino', 'Puerto_Destino', 'Estado_Instalacion']
+    };
+
+    adminTableHead.innerHTML = `<tr>${headers[type].map(h => `<th onclick="sortTable('${h}')">${h}</th>`).join('')}<th>Acciones</th></tr>`;
+    
+    adminTableBody.innerHTML = data.map(row => `
+        <tr>
+            ${headers[type].map(h => `<td>${row[h] || '-'}</td>`).join('')}
+            <td>
+                <button class="action-btn btn-warning" style="padding:4px 8px; font-size:0.7rem" 
+                        onclick="editItem('${type}', '${row[headers[type][0]]}')">
+                    <span class="material-icons" style="font-size:1rem">edit</span>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function sortTable(column) {
+    if (currentSort.column === column) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.column = column;
+        currentSort.direction = 'asc';
+    }
+    renderAdminTable(currentSort.type);
+}
+
+function toggleAdminForm() {
+    if (adminFormContainer.style.display === 'none') {
+        const activeTabBtn = document.querySelector('.admin-tabs .tab-btn.active');
+        const tabText = activeTabBtn.innerText;
+        const formId = tabText.includes('Equipos') ? 'formEquipo' : (tabText.includes('Cables') ? 'formCable' : 'formRuteo');
+        
+        const form = document.getElementById(formId).cloneNode(true);
+        form.style.display = 'grid';
+        form.id = 'activeAdminForm';
+        
+        // Reset to "New" mode
+        form.querySelector('[name="isEdit"]').value = 'false';
+        const submitBtn = form.querySelector('button[type="submit"]');
+        submitBtn.innerText = "Guardar Nuevo";
+        
+        formContainerInner.innerHTML = '';
+        formContainerInner.appendChild(form);
+        adminFormContainer.style.display = 'block';
+        
+        // Re-attach listener
+        form.addEventListener('submit', (e) => handleFormSubmit(e, formId));
+    } else {
+        adminFormContainer.style.display = 'none';
+    }
+}
+
+function editItem(type, id) {
+    const item = db[type].find(i => (i.ID_Equipo || i.ID_Cable || i.ID_Patch) === id);
+    if (!item) return;
+
+    const formId = type === 'equipos' ? 'formEquipo' : (type === 'cables' ? 'formCable' : 'formRuteo');
+    const form = document.getElementById(formId).cloneNode(true);
+    form.style.display = 'grid';
+    form.id = 'activeAdminForm';
+    
+    // Fill data
+    form.querySelector('[name="isEdit"]').value = 'true';
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.innerText = "Actualizar";
+    submitBtn.classList.replace('btn-primary', 'btn-warning');
+
+    // Mapeo de campos
+    const inputs = form.querySelectorAll('input, select');
+    inputs.forEach(input => {
+        const name = input.name;
+        // Normalizar nombres de campos (form name vs db key)
+        let dbKey = name;
+        if (name === 'id') dbKey = type === 'equipos' ? 'ID_Equipo' : 'ID_Cable';
+        if (name === 'id_patch') dbKey = 'ID_Patch';
+        if (name === 'id_origen') dbKey = 'ID_Origen';
+        if (name === 'id_destino') dbKey = 'ID_Destino';
+        
+        if (item[dbKey] !== undefined) input.value = item[dbKey];
+    });
+
+    formContainerInner.innerHTML = '';
+    formContainerInner.appendChild(form);
+    adminFormContainer.style.display = 'block';
+    form.scrollIntoView({ behavior: 'smooth' });
+
+    form.addEventListener('submit', (e) => handleFormSubmit(e, formId));
+}
+
+async function handleFormSubmit(e, formId) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    const body = Object.fromEntries(formData.entries());
+    const isEdit = body.isEdit === 'true';
+
+    let action = '';
+    if (formId === 'formEquipo') action = isEdit ? 'EDIT_EQUIPO' : 'ADD_EQUIPO';
+    if (formId === 'formCable') action = isEdit ? 'EDIT_CABLE' : 'ADD_CABLE';
+    if (formId === 'formRuteo') action = isEdit ? 'EDIT_CONEXION' : 'ADD_CONEXION';
+
+    const success = await handleAction(action, body);
+    if (success) {
+        adminFormContainer.style.display = 'none';
+        renderAdminTable(currentSort.type);
+        populateDatalists();
+    }
+}
+
+async function handleAction(action, body) {
+    const originalText = searchInput.placeholder;
+    searchInput.placeholder = "Sincronizando...";
+    
+    // Actualización optimista del estado local
+    if (action.startsWith('ADD_')) {
+        const type = action.includes('EQUIPO') ? 'equipos' : (action.includes('CABLE') ? 'cables' : 'conexiones');
+        // Adaptar nombres de campos de formulario a DB
+        const entry = { ...body };
+        if (body.id) entry[type === 'equipos' ? 'ID_Equipo' : 'ID_Cable'] = body.id;
+        db[type].push(entry);
+    } else if (action.startsWith('EDIT_')) {
+        const type = action.includes('EQUIPO') ? 'equipos' : (action.includes('CABLE') ? 'cables' : 'conexiones');
+        const idKey = type === 'equipos' ? 'ID_Equipo' : (type === 'cables' ? 'ID_Cable' : 'ID_Patch');
+        const idVal = body.id || body.id_patch;
+        const index = db[type].findIndex(i => i[idKey] === idVal);
+        if (index !== -1) {
+            const entry = { ...body };
+            if (body.id) entry[idKey] = body.id;
+            db[type][index] = { ...db[type][index], ...entry };
+        }
+    }
+
+    localStorage.setItem('av_tech_db', JSON.stringify(db));
+
+    if (navigator.onLine) {
+        try {
+            await sendToServer(action, body);
+            searchInput.placeholder = "¡Guardado!";
+            setTimeout(() => searchInput.placeholder = originalText, 2000);
+            return true;
+        } catch (e) {
+            queueAction({ action, body });
+        }
+    } else {
+        queueAction({ action, body });
+    }
+    
+    searchInput.placeholder = originalText;
+    return true;
+}
+
+async function sendToServer(action, body) {
+    if (!API_URL) return;
+    const response = await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action, ...body })
+    });
+    return response.json();
 }
 
 function updateSelects() {
@@ -358,8 +558,8 @@ function updateSelects() {
     }).join('');
 
     const placeholder = '<option value="">-- Seleccionar --</option>';
-    selOrigen.innerHTML = placeholder + options;
-    selDestino.innerHTML = placeholder + options;
+    if(selOrigen) selOrigen.innerHTML = placeholder + options;
+    if(selDestino) selDestino.innerHTML = placeholder + options;
 }
 
 function populateDatalists() {
@@ -381,11 +581,11 @@ function populateDatalists() {
 function autoGenerateId(formType) {
     let prefix = '';
     if (formType === 'equipo') {
-        const cat = document.getElementById('equip_cat').value.substring(0, 3).toUpperCase();
-        const nom = document.getElementById('equip_nombre').value.substring(0, 3).toUpperCase();
+        const cat = document.getElementById('equip_cat')?.value.substring(0, 3).toUpperCase();
+        const nom = document.getElementById('equip_nombre')?.value.substring(0, 3).toUpperCase();
         if (cat && nom) prefix = `${cat}-${nom}`;
     } else {
-        const tip = document.getElementById('cable_tipo').value.substring(0, 3).toUpperCase();
+        const tip = document.getElementById('cable_tipo')?.value.substring(0, 3).toUpperCase();
         if (tip) prefix = `CBL-${tip}`;
     }
 
@@ -410,124 +610,6 @@ document.getElementById('equip_cat')?.addEventListener('input', () => autoGenera
 document.getElementById('equip_nombre')?.addEventListener('input', () => autoGenerateId('equipo'));
 document.getElementById('cable_tipo')?.addEventListener('input', () => autoGenerateId('cable'));
 
-document.getElementById('formEquipo')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
-    processAction({ action: 'ADD_EQUIPO', ...data, estado: 'Guardado' });
-    e.target.reset();
-    alert('Equipo encolado/guardado');
-});
-
-document.getElementById('formCable')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
-    processAction({ action: 'ADD_CABLE', ...data, estado: 'Guardado' });
-    e.target.reset();
-    alert('Cable encolado/guardado');
-});
-
-document.getElementById('formRuteo')?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
-    processAction({ action: 'ADD_CONEXION', ...data, estado: 'Pendiente' });
-    e.target.reset();
-    alert('Conexión encolada/guardada');
-});
-
-/**
- * 4. Manejo de Acciones (Online/Offline)
- */
-async function handleUpdatePatch(id) {
-    const action = {
-        action: 'UPDATE_PATCH',
-        id: id,
-        value: 'Conectado',
-        timestamp: Date.now()
-    };
-    
-    processAction(action);
-}
-
-async function handleUpdateLogistica(id, value) {
-    const action = {
-        action: 'UPDATE_LOGISTICA',
-        id: id,
-        value: value,
-        timestamp: Date.now()
-    };
-
-    processAction(action);
-}
-
-async function processAction(action) {
-    // UI Feedback immediate
-    if (action.action === 'UPDATE_PATCH') {
-        const conn = db.conexiones.find(c => c.ID_Patch === action.id);
-        if (conn) conn.Estado_Instalacion = action.value;
-    } else if (action.action === 'UPDATE_LOGISTICA') {
-        const item = [...db.equipos, ...db.cables].find(i => (i.ID_Equipo || i.ID_Cable) === action.id);
-        if (item) item.Estado_Logistica = action.value;
-    } else if (action.action === 'ADD_EQUIPO') {
-        db.equipos.push({
-            ID_Equipo: action.id, Nombre: action.nombre, Categoria: action.categoria,
-            Ubicacion_Uso: action.ubicacion, Propietario: action.propietario,
-            Lugar_Guardado_Final: action.lugar, Estado_Logistica: action.estado, Notas: action.notas
-        });
-    } else if (action.action === 'ADD_CABLE') {
-        db.cables.push({
-            ID_Cable: action.id, Tipo_Conector: action.tipo, Longitud_m: action.longitud,
-            Propietario: action.propietario, Lugar_Guardado_Final: action.lugar,
-            Estado_Logistica: action.estado, Notas: action.notas
-        });
-    } else if (action.action === 'ADD_CONEXION') {
-        db.conexiones.push({
-            ID_Patch: action.id_patch, ID_Origen: action.id_origen, Puerto_Origen: action.puerto_origen,
-            ID_Destino: action.id_destino, Puerto_Destino: action.puerto_destino,
-            Tipo_Senial: action.tipo_senial, Estado_Instalacion: action.estado
-        });
-    }
-    
-    // Guardar estado local para reactividad inmediata post-reinicio
-    localStorage.setItem('av_tech_db', JSON.stringify(db));
-    renderResults();
-
-    const originalText = searchInput.placeholder;
-    searchInput.placeholder = "Enviando a la base...";
-    searchInput.disabled = true;
-
-    if (navigator.onLine) {
-        try {
-            await sendToServer(action);
-            // Feedback visual exitoso
-            const btns = document.querySelectorAll('.card .action-btn, #adminPanel .action-btn');
-            btns.forEach(btn => {
-                const oldText = btn.innerText;
-                btn.innerText = "¡Enviado!";
-                btn.classList.add('btn-success');
-                setTimeout(() => { btn.innerText = oldText; btn.classList.remove('btn-success'); }, 2000);
-            });
-        } catch (e) {
-            queueAction(action);
-        }
-    } else {
-        queueAction(action);
-    }
-
-    searchInput.placeholder = originalText;
-    searchInput.disabled = false;
-}
-
-async function sendToServer(action) {
-    // Para Google Apps Script, usamos 'no-cors' y enviamos como texto plano 
-    // para evitar preflight OPTIONS, pero GAS recibirá el JSON en postData.contents
-    await fetch(API_URL, {
-        method: 'POST',
-        mode: 'no-cors', 
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(action)
     });
     console.log('Action sent to server (no-cors mode)');
 }
@@ -567,6 +649,7 @@ function setMode(mode) {
         adminPanel.style.display = 'block';
         searchSection.style.display = 'none';
         resultsContainer.style.display = 'none';
+        showAdminTab('tabEquipo', document.querySelector('.tab-btn'));
     } else {
         adminPanel.style.display = 'none';
         searchSection.style.display = 'flex';

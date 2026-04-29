@@ -25,98 +25,95 @@
         </div>
     </nav>
 
-    <!-- Sidebar Menu -->
     <div id="sideMenu" class="side-menu">
-        <div class="side-menu-content">
-            <div class="side-menu-header">
-                <h2>Menú</h2>
-                <button id="closeMenuBtn" class="close-btn"><span class="material-icons">close</span></button>
-            </div>
-            <div class="menu-section">
-                <h3>Modos</h3>
-                <button class="menu-item" onclick="setMode('ARMADO')"><span class="material-icons">route</span> Modo Armado</button>
-                <button class="menu-item" onclick="setMode('DESARME')"><span class="material-icons">inventory_2</span> Modo Desarme</button>
-                <button class="menu-item" onclick="setMode('ADMIN')"><span class="material-icons">settings</span> Modo Admin</button>
-            </div>
-            <div class="menu-section">
-                <h3>Referencias</h3>
-                <a href="https://github.com/entrerios2/entrerios2.github.io/tree/main/Especificaciones_Instalacion" target="_blank" class="menu-item"><span class="material-icons">map</span> Diagramas</a>
-                <a href="https://github.com/entrerios2/entrerios2.github.io/tree/main/Manuales" target="_blank" class="menu-item"><span class="material-icons">description</span> Manuales</a>
-            </div>
-            <div class="menu-section">
-                <h3>Acciones</h3>
-                <button class="menu-item" onclick="shareApp()"><span class="material-icons">share</span> Compartir App</button>
-            </div>
-        </div>
+        <!-- ... existing menu ... -->
     </div>
-    <main class="container">
-        <!-- QR Reader Container -->
-        <div id="reader"></div>
 
-        <!-- Search Section -->
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="Busca ID o Nombre..." autocomplete="off">
-            <button class="qr-btn" id="qrStartBtn" title="Escanear QR"><span class="material-icons">qr_code_scanner</span></button>
-        </div>
+    <div class="desktop-wrapper">
+        <main class="container">
+            <!-- QR Reader Container -->
+            <div id="reader"></div>
 
-        <!-- Admin Panel (Hidden by default) -->
-        <div id="adminPanel" style="display: none;">
-            <div class="admin-tabs">
-                <button class="tab-btn active" onclick="showAdminTab('tabEquipo', this)">Equipo</button>
-                <button class="tab-btn" onclick="showAdminTab('tabCable', this)">Cable</button>
-                <button class="tab-btn" onclick="showAdminTab('tabRuteo', this)">Ruteo</button>
+            <!-- Search Section -->
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Busca ID o Nombre..." autocomplete="off">
+                <button class="qr-btn" id="qrStartBtn" title="Escanear QR"><span class="material-icons">qr_code_scanner</span></button>
             </div>
 
-            <!-- Form Equipo -->
-            <form id="formEquipo" class="admin-tab-content">
-                <input type="text" name="id" id="equip_id" placeholder="ID (ej: XR-01)" required>
-                <input type="text" name="nombre" id="equip_nombre" placeholder="Nombre (ej: Consola XR12)" required>
-                <input type="text" name="categoria" id="equip_cat" list="list_categorias" placeholder="Categoría (ej: Audio)">
-                <input type="text" name="ubicacion" list="list_ubicaciones" placeholder="Ubicación (ej: FOH)">
-                <input type="text" name="propietario" list="list_propietarios" placeholder="Propietario (ej: Propio)">
-                <input type="text" name="lugar" list="list_lugares" placeholder="Lugar Guardado (ej: Rack 1)">
-                <input type="text" name="notas" placeholder="Notas">
-                <button type="submit" class="action-btn btn-primary">Guardar Equipo</button>
-            </form>
+            <!-- Admin Panel -->
+            <div id="adminPanel" style="display: none;">
+                <div class="admin-tabs">
+                    <button class="tab-btn active" onclick="showAdminTab('tabEquipo', this)">Gestión Equipos</button>
+                    <button class="tab-btn" onclick="showAdminTab('tabCable', this)">Gestión Cables</button>
+                    <button class="tab-btn" onclick="showAdminTab('tabRuteo', this)">Gestión Ruteo</button>
+                </div>
 
-            <!-- Form Cable -->
-            <form id="formCable" class="admin-tab-content" style="display: none;">
-                <input type="text" name="id" id="cable_id" placeholder="ID (ej: CBL-001)" required>
-                <input type="text" name="tipo" id="cable_tipo" list="list_conectores" placeholder="Tipo Conector (ej: XLR M-F)">
-                <input type="number" name="longitud" placeholder="Longitud (m)">
-                <input type="text" name="propietario" list="list_propietarios" placeholder="Propietario">
-                <input type="text" name="lugar" list="list_lugares" placeholder="Lugar Guardado">
-                <input type="text" name="notas" placeholder="Notas">
-                <button type="submit" class="action-btn btn-primary">Guardar Cable</button>
-            </form>
+                <div class="admin-actions">
+                    <button class="action-btn btn-primary" onclick="toggleAdminForm()">
+                        <span class="material-icons">add</span> Nuevo Elemento
+                    </button>
+                </div>
 
-            <datalist id="list_categorias"></datalist>
-            <datalist id="list_ubicaciones"></datalist>
-            <datalist id="list_propietarios"></datalist>
-            <datalist id="list_lugares"></datalist>
-            <datalist id="list_conectores"></datalist>
+                <!-- Forms (Collapsible) -->
+                <div id="adminFormContainer" style="display: none; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 2rem;">
+                    <!-- Forms will be shown here based on active tab -->
+                    <div id="formContainerInner"></div>
+                </div>
 
-            <!-- Form Ruteo -->
-            <form id="formRuteo" class="admin-tab-content" style="display: none;">
-                <input type="text" name="id_patch" placeholder="ID Patch (ej: 001)" required>
-                <select name="id_origen" id="selectOrigen" required>
-                    <option value="">-- Seleccionar Origen --</option>
-                </select>
-                <input type="text" name="puerto_origen" placeholder="Puerto Origen (ej: XLR)">
-                <select name="id_destino" id="selectDestino" required>
-                    <option value="">-- Seleccionar Destino --</option>
-                </select>
-                <input type="text" name="puerto_destino" placeholder="Puerto Destino (ej: Input 1)">
-                <input type="text" name="tipo_senial" placeholder="Tipo Señal (ej: Audio)">
-                <button type="submit" class="action-btn btn-primary">Guardar Ruteo</button>
-            </form>
-        </div>
+                <!-- Tables -->
+                <div class="table-responsive">
+                    <table id="adminTable">
+                        <thead id="adminTableHead"></thead>
+                        <tbody id="adminTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
 
-        <!-- Results Section -->
-        <div id="resultsContainer">
-            <!-- Dynamic cards will be injected here -->
-        </div>
-    </main>
+            <!-- Results Section (Tree) -->
+            <div id="resultsContainer"></div>
+        </main>
+    </div>
+
+    <!-- Hidden original forms to be moved dynamically -->
+    <div style="display: none;">
+        <form id="formEquipo" class="admin-tab-content">
+            <input type="hidden" name="isEdit" value="false">
+            <input type="text" name="id" id="equip_id" placeholder="ID (ej: XR-01)" required>
+            <input type="text" name="nombre" id="equip_nombre" placeholder="Nombre (ej: Consola XR12)" required>
+            <input type="text" name="categoria" id="equip_cat" list="list_categorias" placeholder="Categoría (ej: Audio)">
+            <input type="text" name="ubicacion" list="list_ubicaciones" placeholder="Ubicación (ej: FOH)">
+            <input type="text" name="propietario" list="list_propietarios" placeholder="Propietario (ej: Propio)">
+            <input type="text" name="lugar" list="list_lugares" placeholder="Lugar Guardado (ej: Rack 1)">
+            <input type="text" name="notas" placeholder="Notas">
+            <button type="submit" id="btnSubmitEquipo" class="action-btn btn-primary">Guardar Equipo</button>
+        </form>
+
+        <form id="formCable" class="admin-tab-content">
+            <input type="hidden" name="isEdit" value="false">
+            <input type="text" name="id" id="cable_id" placeholder="ID (ej: CBL-001)" required>
+            <input type="text" name="tipo" id="cable_tipo" list="list_conectores" placeholder="Tipo Conector (ej: XLR M-F)">
+            <input type="number" name="longitud" placeholder="Longitud (m)">
+            <input type="text" name="propietario" list="list_propietarios" placeholder="Propietario">
+            <input type="text" name="lugar" list="list_lugares" placeholder="Lugar Guardado">
+            <input type="text" name="notas" placeholder="Notas">
+            <button type="submit" id="btnSubmitCable" class="action-btn btn-primary">Guardar Cable</button>
+        </form>
+
+        <form id="formRuteo" class="admin-tab-content">
+            <input type="hidden" name="isEdit" value="false">
+            <input type="text" name="id_patch" placeholder="ID Patch (ej: 001)" required>
+            <select name="id_origen" id="selectOrigen" required>
+                <option value="">-- Seleccionar Origen --</option>
+            </select>
+            <input type="text" name="puerto_origen" placeholder="Puerto Origen (ej: XLR)">
+            <select name="id_destino" id="selectDestino" required>
+                <option value="">-- Seleccionar Destino --</option>
+            </select>
+            <input type="text" name="puerto_destino" placeholder="Puerto Destino (ej: Input 1)">
+            <input type="text" name="tipo_senial" placeholder="Tipo Señal (ej: Audio)">
+            <button type="submit" id="btnSubmitRuteo" class="action-btn btn-primary">Guardar Ruteo</button>
+        </form>
+    </div>
 
     <!-- Setup Modal -->
     <style>

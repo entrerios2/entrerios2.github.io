@@ -73,6 +73,30 @@ function doPost(e) {
       }
       result = updated ? { status: "success", message: "Logística actualizada" } : { status: "error", message: "ID no encontrado en Equipos ni Cables" };
     }
+    else if (action === "EDIT_EQUIPO") {
+      const rowData = [
+        body.id, body.nombre, body.categoria, body.ubicacion, 
+        body.propietario, body.lugar, body.estado, body.notas
+      ];
+      const success = findAndReplaceRow("1_Equipos", "ID_Equipo", body.id, rowData);
+      result = success ? { status: "success", message: "Equipo editado" } : { status: "error", message: "ID no encontrado" };
+    }
+    else if (action === "EDIT_CABLE") {
+      const rowData = [
+        body.id, body.tipo, body.longitud, body.propietario, 
+        body.lugar, body.estado, body.notas
+      ];
+      const success = findAndReplaceRow("2_Cables", "ID_Cable", body.id, rowData);
+      result = success ? { status: "success", message: "Cable editado" } : { status: "error", message: "ID no encontrado" };
+    }
+    else if (action === "EDIT_CONEXION") {
+      const rowData = [
+        body.id_patch, body.id_origen, body.puerto_origen, 
+        body.id_destino, body.puerto_destino, body.tipo_senial, body.estado
+      ];
+      const success = findAndReplaceRow("3_Conexiones", "ID_Patch", body.id_patch, rowData);
+      result = success ? { status: "success", message: "Conexión editada" } : { status: "error", message: "ID no encontrado" };
+    }
 
     return createJsonResponse(result);
   } catch (error) {
@@ -132,6 +156,40 @@ function updateRowValue(sheetName, idColumnName, idValue, targetColumnName, newV
         sheet.getRange(i + 1, targetIndex + 1).setValue(newValue);
         return true;
       }
+    }
+  }
+  return false;
+}
+
+/**
+ * Busca un ID y reemplaza toda la fila con nuevos datos.
+ * Utiliza la misma lógica robusta de comparación que updateRowValue.
+ */
+function findAndReplaceRow(sheetName, idColumnName, idValue, newRowData) {
+  const sheet = SS.getSheetByName(sheetName);
+  if (!sheet) return false;
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idIndex = headers.indexOf(idColumnName);
+
+  if (idIndex === -1) return false;
+
+  const searchStr = String(idValue).trim().toLowerCase();
+
+  for (let i = 1; i < data.length; i++) {
+    const rawCellValue = data[i][idIndex];
+    const cellStr = String(rawCellValue).trim().toLowerCase();
+    
+    let match = (cellStr === searchStr);
+    if (!match && rawCellValue !== "" && idValue !== "" && !isNaN(rawCellValue) && !isNaN(idValue)) {
+      match = (Number(rawCellValue) === Number(idValue));
+    }
+
+    if (match) {
+      // Reemplazamos la fila completa (i+1 porque es 1-indexed en la hoja)
+      sheet.getRange(i + 1, 1, 1, newRowData.length).setValues([newRowData]);
+      return true;
     }
   }
   return false;
