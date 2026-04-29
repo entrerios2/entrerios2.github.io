@@ -30,6 +30,53 @@
             <button class="qr-btn" id="qrStartBtn" title="Escanear QR">📸</button>
         </div>
 
+        <!-- Admin Panel (Hidden by default) -->
+        <div id="adminPanel" style="display: none;">
+            <div class="admin-tabs">
+                <button class="tab-btn active" onclick="showAdminTab('tabEquipo', this)">Equipo</button>
+                <button class="tab-btn" onclick="showAdminTab('tabCable', this)">Cable</button>
+                <button class="tab-btn" onclick="showAdminTab('tabRuteo', this)">Ruteo</button>
+            </div>
+
+            <!-- Form Equipo -->
+            <form id="formEquipo" class="admin-tab-content">
+                <input type="text" name="id" placeholder="ID (ej: XR-01)" required>
+                <input type="text" name="nombre" placeholder="Nombre (ej: Consola XR12)" required>
+                <input type="text" name="categoria" placeholder="Categoría (ej: Audio)">
+                <input type="text" name="ubicacion" placeholder="Ubicación (ej: FOH)">
+                <input type="text" name="propietario" placeholder="Propietario (ej: Propio)">
+                <input type="text" name="lugar" placeholder="Lugar Guardado (ej: Rack 1)">
+                <input type="text" name="notas" placeholder="Notas">
+                <button type="submit" class="action-btn btn-primary">Guardar Equipo</button>
+            </form>
+
+            <!-- Form Cable -->
+            <form id="formCable" class="admin-tab-content" style="display: none;">
+                <input type="text" name="id" placeholder="ID (ej: CBL-001)" required>
+                <input type="text" name="tipo" placeholder="Tipo Conector (ej: XLR M-F)">
+                <input type="number" name="longitud" placeholder="Longitud (m)">
+                <input type="text" name="propietario" placeholder="Propietario">
+                <input type="text" name="lugar" placeholder="Lugar Guardado">
+                <input type="text" name="notas" placeholder="Notas">
+                <button type="submit" class="action-btn btn-primary">Guardar Cable</button>
+            </form>
+
+            <!-- Form Ruteo -->
+            <form id="formRuteo" class="admin-tab-content" style="display: none;">
+                <input type="text" name="id_patch" placeholder="ID Patch (ej: 001)" required>
+                <select name="id_origen" id="selectOrigen" required>
+                    <option value="">-- Seleccionar Origen --</option>
+                </select>
+                <input type="text" name="puerto_origen" placeholder="Puerto Origen (ej: XLR)">
+                <select name="id_destino" id="selectDestino" required>
+                    <option value="">-- Seleccionar Destino --</option>
+                </select>
+                <input type="text" name="puerto_destino" placeholder="Puerto Destino (ej: Input 1)">
+                <input type="text" name="tipo_senial" placeholder="Tipo Señal (ej: Audio)">
+                <button type="submit" class="action-btn btn-primary">Guardar Ruteo</button>
+            </form>
+        </div>
+
         <!-- Results Section -->
         <div id="resultsContainer">
             <!-- Dynamic cards will be injected here -->
@@ -54,6 +101,7 @@
     <div class="mode-toggle">
         <button class="mode-btn active" id="modeArmado">ARMADO</button>
         <button class="mode-btn" id="modeDesarme">DESARME</button>
+        <button class="mode-btn" id="modeAdmin">ADMIN</button>
     </div>
 
     <script src="app.js"></script>

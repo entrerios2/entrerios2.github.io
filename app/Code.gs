@@ -36,9 +36,37 @@ function doPost(e) {
       const updated = updateRowValue("3_Conexiones", "ID_Patch", body.id, "Estado_Instalacion", body.value);
       result = updated ? { status: "success", message: "Patch actualizado" } : { status: "error", message: "ID_Patch no encontrado" };
     } 
+    else if (action === "ADD_EQUIPO") {
+      const sheet = SS.getSheetByName("1_Equipos");
+      if (sheet) {
+        sheet.appendRow([
+          body.id, body.nombre, body.categoria, body.ubicacion, 
+          body.propietario, body.lugar, body.estado, body.notas
+        ]);
+        result = { status: "success", message: "Equipo agregado" };
+      }
+    }
+    else if (action === "ADD_CABLE") {
+      const sheet = SS.getSheetByName("2_Cables");
+      if (sheet) {
+        sheet.appendRow([
+          body.id, body.tipo, body.longitud, body.propietario, 
+          body.lugar, body.estado, body.notas
+        ]);
+        result = { status: "success", message: "Cable agregado" };
+      }
+    }
+    else if (action === "ADD_CONEXION") {
+      const sheet = SS.getSheetByName("3_Conexiones");
+      if (sheet) {
+        sheet.appendRow([
+          body.id_patch, body.id_origen, body.puerto_origen, 
+          body.id_destino, body.puerto_destino, body.tipo_senial, body.estado
+        ]);
+        result = { status: "success", message: "Conexión agregada" };
+      }
+    }
     else if (action === "UPDATE_LOGISTICA") {
-      // Requisito: Actualizar Estado_Logistica en 1_Equipos o 2_Cables
-      // Buscamos en ambas solapas usando sus respectivos IDs
       let updated = updateRowValue("1_Equipos", "ID_Equipo", body.id, "Estado_Logistica", body.value);
       if (!updated) {
         updated = updateRowValue("2_Cables", "ID_Cable", body.id, "Estado_Logistica", body.value);

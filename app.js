@@ -16,6 +16,9 @@ const qrStartBtn = document.getElementById('qrStartBtn');
 const resultsContainer = document.getElementById('resultsContainer');
 const modeArmadoBtn = document.getElementById('modeArmado');
 const modeDesarmeBtn = document.getElementById('modeDesarme');
+const modeAdminBtn = document.getElementById('modeAdmin');
+const adminPanel = document.getElementById('adminPanel');
+const searchSection = document.querySelector('.search-container');
 const offlineStatus = document.querySelector('.offline-status');
 
 /**
@@ -204,6 +207,67 @@ function renderResults() {
 }
 
 /**
+ * 3.1 Funciones de Administración
+ */
+function showAdminTab(tabId, btn) {
+    document.querySelectorAll('.admin-tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    
+    if (btn) btn.classList.add('active');
+    
+    if (tabId === 'tabEquipo') {
+        document.getElementById('formEquipo').style.display = 'flex';
+    } else if (tabId === 'tabCable') {
+        document.getElementById('formCable').style.display = 'flex';
+    } else if (tabId === 'tabRuteo') {
+        document.getElementById('formRuteo').style.display = 'flex';
+        updateSelects();
+    }
+}
+
+function updateSelects() {
+    const selOrigen = document.getElementById('selectOrigen');
+    const selDestino = document.getElementById('selectDestino');
+    
+    const options = [...db.equipos, ...db.cables].map(item => {
+        const id = item.ID_Equipo || item.ID_Cable;
+        return `<option value="${id}">${id}</option>`;
+    }).join('');
+
+    const placeholder = '<option value="">-- Seleccionar --</option>';
+    selOrigen.innerHTML = placeholder + options;
+    selDestino.innerHTML = placeholder + options;
+}
+
+// Handlers de Formularios
+document.getElementById('formEquipo')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    processAction({ action: 'ADD_EQUIPO', ...data, estado: 'Guardado' });
+    e.target.reset();
+    alert('Equipo encolado/guardado');
+});
+
+document.getElementById('formCable')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    processAction({ action: 'ADD_CABLE', ...data, estado: 'Guardado' });
+    e.target.reset();
+    alert('Cable encolado/guardado');
+});
+
+document.getElementById('formRuteo')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    processAction({ action: 'ADD_CONEXION', ...data, estado: 'Pendiente' });
+    e.target.reset();
+    alert('Conexión encolada/guardada');
+});
+
+/**
  * 4. Manejo de Acciones (Online/Offline)
  */
 async function handleUpdatePatch(id) {
@@ -233,10 +297,31 @@ async function processAction(action) {
     if (action.action === 'UPDATE_PATCH') {
         const conn = db.conexiones.find(c => c.ID_Patch === action.id);
         if (conn) conn.Estado_Instalacion = action.value;
-    } else {
+    } else if (action.action === 'UPDATE_LOGISTICA') {
         const item = [...db.equipos, ...db.cables].find(i => (i.ID_Equipo || i.ID_Cable) === action.id);
         if (item) item.Estado_Logistica = action.value;
+    } else if (action.action === 'ADD_EQUIPO') {
+        db.equipos.push({
+            ID_Equipo: action.id, Nombre: action.nombre, Categoria: action.categoria,
+            Ubicacion_Uso: action.ubicacion, Propietario: action.propietario,
+            Lugar_Guardado_Final: action.lugar, Estado_Logistica: action.estado, Notas: action.notas
+        });
+    } else if (action.action === 'ADD_CABLE') {
+        db.cables.push({
+            ID_Cable: action.id, Tipo_Conector: action.tipo, Longitud_m: action.longitud,
+            Propietario: action.propietario, Lugar_Guardado_Final: action.lugar,
+            Estado_Logistica: action.estado, Notas: action.notas
+        });
+    } else if (action.action === 'ADD_CONEXION') {
+        db.conexiones.push({
+            ID_Patch: action.id_patch, ID_Origen: action.id_origen, Puerto_Origen: action.puerto_origen,
+            ID_Destino: action.id_destino, Puerto_Destino: action.puerto_destino,
+            Tipo_Senial: action.tipo_senial, Estado_Instalacion: action.estado
+        });
     }
+    
+    // Guardar estado local para reactividad inmediata post-reinicio
+    localStorage.setItem('av_tech_db', JSON.stringify(db));
     renderResults();
 
     if (navigator.onLine) {
@@ -320,6 +405,10 @@ modeArmadoBtn.addEventListener('click', () => {
     currentMode = 'ARMADO';
     modeArmadoBtn.classList.add('active');
     modeDesarmeBtn.classList.remove('active');
+    modeAdminBtn.classList.remove('active');
+    adminPanel.style.display = 'none';
+    searchSection.style.display = 'flex';
+    resultsContainer.style.display = 'block';
     renderResults();
 });
 
@@ -327,7 +416,22 @@ modeDesarmeBtn.addEventListener('click', () => {
     currentMode = 'DESARME';
     modeDesarmeBtn.classList.add('active');
     modeArmadoBtn.classList.remove('active');
+    modeAdminBtn.classList.remove('active');
+    adminPanel.style.display = 'none';
+    searchSection.style.display = 'flex';
+    resultsContainer.style.display = 'block';
     renderResults();
+});
+
+modeAdminBtn.addEventListener('click', () => {
+    currentMode = 'ADMIN';
+    modeAdminBtn.classList.add('active');
+    modeArmadoBtn.classList.remove('active');
+    modeDesarmeBtn.classList.remove('active');
+    
+    adminPanel.style.display = 'block';
+    searchSection.style.display = 'none';
+    resultsContainer.style.display = 'none';
 });
 
 window.addEventListener('online', () => {
