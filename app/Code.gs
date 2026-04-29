@@ -38,10 +38,10 @@ function doPost(e) {
     } 
     else if (action === "UPDATE_LOGISTICA") {
       // Requisito: Actualizar Estado_Logistica en 1_Equipos o 2_Cables
-      // Buscamos en ambas solapas ya que el ID es único para el ítem
-      let updated = updateRowValue("1_Equipos", "ID", body.id, "Estado_Logistica", body.value);
+      // Buscamos en ambas solapas usando sus respectivos IDs
+      let updated = updateRowValue("1_Equipos", "ID_Equipo", body.id, "Estado_Logistica", body.value);
       if (!updated) {
-        updated = updateRowValue("2_Cables", "ID", body.id, "Estado_Logistica", body.value);
+        updated = updateRowValue("2_Cables", "ID_Cable", body.id, "Estado_Logistica", body.value);
       }
       result = updated ? { status: "success", message: "Logística actualizada" } : { status: "error", message: "ID no encontrado en Equipos ni Cables" };
     }

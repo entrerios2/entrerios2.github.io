@@ -139,16 +139,16 @@ function renderResults() {
     // OR search in cables/equipos
     const route = findFullRoute(query);
     
-    // Check if the route actually exists in connections
     const hasConnections = db.conexiones.some(c => c.ID_Origen === query || c.ID_Destino === query);
-    
-    // If it's a known ID (equipment/cable) but has no connections, show it alone
-    const itemInfo = [...db.equipos, ...db.cables].find(i => i.ID === query);
+    const itemInfo = [...db.equipos, ...db.cables].find(i => (i.ID_Equipo || i.ID_Cable) === query);
 
     if (!hasConnections && !itemInfo) {
         resultsContainer.innerHTML = `<div class="card" style="text-align:center">No se encontró el ID "${query}"</div>`;
         return;
     }
+
+    // Encontrar la conexión principal para obtener el ID_Patch
+    const mainConn = db.conexiones.find(c => c.ID_Origen === query || c.ID_Destino === query);
 
     const card = document.createElement('div');
     card.className = 'card';
@@ -157,9 +157,8 @@ function renderResults() {
     let headerHTML = `<div class="card-header"><span class="card-id">${query}</span>`;
     
     if (currentMode === 'ARMADO') {
-        const conn = db.conexiones.find(c => c.ID_Origen === query || c.ID_Destino === query);
-        const statusClass = conn?.Estado_Instalacion === 'Conectado' ? 'badge-done' : 'badge-pending';
-        headerHTML += `<span class="badge ${statusClass}">${conn?.Estado_Instalacion || 'S/D'}</span>`;
+        const statusClass = mainConn?.Estado_Instalacion === 'Conectado' ? 'badge-done' : 'badge-pending';
+        headerHTML += `<span class="badge ${statusClass}">${mainConn?.Estado_Instalacion || 'S/D'}</span>`;
     } else {
         const status = itemInfo?.Estado_Logistica || 'Pendiente';
         const statusClass = (status === 'Guardado' || status === 'Devuelto') ? 'badge-done' : 'badge-pending';
@@ -178,7 +177,9 @@ function renderResults() {
                     ${index < route.length - 1 ? '<div class="route-arrow">⬇</div>' : ''}
                 `).join('')}
             </div>
-            <button class="action-btn btn-primary" onclick="handleUpdatePatch('${query}')">Marcar como Conectado</button>
+            <button class="action-btn btn-primary" onclick="handleUpdatePatch('${mainConn?.ID_Patch}')" ${!mainConn ? 'disabled' : ''}>
+                Marcar como Conectado
+            </button>
         `;
     } else {
         // MODO DESARME
@@ -230,10 +231,10 @@ async function handleUpdateLogistica(id, value) {
 async function processAction(action) {
     // UI Feedback immediate
     if (action.action === 'UPDATE_PATCH') {
-        const conn = db.conexiones.find(c => c.ID_Origen === action.id || c.ID_Destino === action.id);
+        const conn = db.conexiones.find(c => c.ID_Patch === action.id);
         if (conn) conn.Estado_Instalacion = action.value;
     } else {
-        const item = [...db.equipos, ...db.cables].find(i => i.ID === action.id);
+        const item = [...db.equipos, ...db.cables].find(i => (i.ID_Equipo || i.ID_Cable) === action.id);
         if (item) item.Estado_Logistica = action.value;
     }
     renderResults();
@@ -250,13 +251,15 @@ async function processAction(action) {
 }
 
 async function sendToServer(action) {
-    const response = await fetch(API_URL, {
+    // Para Google Apps Script, usamos 'no-cors' y enviamos como texto plano 
+    // para evitar preflight OPTIONS, pero GAS recibirá el JSON en postData.contents
+    await fetch(API_URL, {
         method: 'POST',
-        mode: 'no-cors', // GAS often needs no-cors for simple posts or careful CORS headers
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors', 
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(action)
     });
-    console.log('Action synced with server');
+    console.log('Action sent to server (no-cors mode)');
 }
 
 function queueAction(action) {

@@ -40,3 +40,23 @@ Copia y pega los siguientes prompts en tu nuevo agente para generar el código s
 > 7. **Interacción de Ruteo:** En el Modo Armado, cada tarjeta mostrará el `Estado_Instalacion`. Si el estado es "Pendiente", debe tener un botón para "Marcar como Conectado" haciendo POST a la API (acción "UPDATE_PATCH").
 > 8. **PWA y Modo Offline (Vital):** La app se usará en lugares sin señal. Al cargar con internet, guarda la base de datos en `localStorage`. Si se pierde la conexión, el buscador y el trazado de rutas deben seguir funcionando localmente. Si alguien presiona un botón de actualización (ej. "Conectado") estando offline, guarda esa acción en una cola local (`offline_queue`). Cuando vuelva el internet (`window.addEventListener('online')`), dispara un ciclo de sincronización enviando todos los POST encolados al backend.
 > 9. Entrégame el código estructurado (idealmente con un `manifest.json` y un Service Worker básico para caché estático) para que sea instalable como PWA y alojable directamente en GitHub Pages. No uses React ni librerías pesadas externas.
+
+---
+
+### PROMPT 3: Agregar Modo Administración (Carga de Datos)
+*Pasale este prompt al agente para que le agregue la funcionalidad de ingreso de datos al código que ya te generó.*
+
+> **Actúa sobre el código de la SPA y el GAS que acabas de generar.**
+> Necesito agregar un "Modo Administración" para poder crear Equipos, Cables y Conexiones directamente desde la App.
+> 
+> **Requisitos para el Backend (`Code.gs`):**
+> 1. Modifica la función `doPost(e)` para aceptar 3 nuevas acciones: `ADD_EQUIPO`, `ADD_CABLE` y `ADD_CONEXION`.
+> 2. Implementa un `switch` o condicionales que usen el método `sheet.appendRow([array_de_datos])` de Google Apps Script para insertar la nueva fila en "1_Equipos", "2_Cables" o "3_Conexiones" según corresponda.
+> 3. Asegúrate de devolver un JSON de éxito.
+> 
+> **Requisitos para el Frontend (`index.html` y `app.js`):**
+> 1. **Botón Admin:** Agrega un tercer botón al toggle de modos: "ARMADO" | "DESARME" | "ADMIN".
+> 2. **Vistas de Formularios:** En el Modo ADMIN, oculta el buscador y muestra un panel con 3 pestañas o secciones: "Cargar Equipo", "Cargar Cable", "Cargar Ruteo".
+> 3. **Autocompletado Inteligente:** El formulario de "Cargar Ruteo" NO debe tener inputs de texto libre para el `ID_Origen` y `ID_Destino`. Debe tener listas desplegables (`<select>`) que se autocompleten iterando `db.equipos` y `db.cables` (mostrando el ID). Esto evitará errores de tipeo al armar el grafo.
+> 4. **Integración Offline:** Al darle "Guardar", empaqueta el JSON y hacé el `fetch` POST. Si el celular no tiene internet, reutiliza tu lógica de `offline_queue` para guardar este alta y mandarla cuando vuelva la conexión.
+> 5. **Reactividad:** Actualiza el estado local (`db`) instantáneamente agregando el nuevo objeto al array que corresponda, para que el nuevo equipo o cable aparezca en el buscador sin necesidad de recargar la página completa.
