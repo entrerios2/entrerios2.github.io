@@ -87,3 +87,27 @@ Copia y pega los siguientes prompts en tu nuevo agente para generar el código s
 > 
 > **5. Generación Automática de IDs Secuenciales:**
 > Agrega un escuchador de eventos a los campos Categoría, Tipo y Nombre. Al escribir, extrae las primeras letras para armar una nomenclatura en mayúsculas (Ej: `CAT-TIP-ELE`). Busca en tu estado global (`db`) cuál es el mayor número registrado para ese prefijo exacto, súmale 1 y mételo automáticamente en el input `ID` (ej: `CAT-TIP-ELE-002`). Debe poder editarse manualmente si el usuario no lo quiere.
+
+---
+
+### PROMPT 5: Inventario por Defecto y Vista Nodo-Céntrica (Múltiples Puertos)
+*Pasá este prompt a tu agente para solucionar el ruteo de los equipos con múltiples entradas y salidas.*
+
+> **Actúa sobre el código de la SPA (`index.html`, `app.js` y `styles.css`).**
+> Necesito realizar un rediseño del flujo principal de la App para soportar equipos complejos (como Consolas o Splitters) que tienen múltiples conexiones de entrada y salida simultáneas.
+> 
+> **1. Material Icons y Textos:**
+> Cambia la etiqueta `<title>` y los encabezados principales (ej. `.nav-title`) a "Audio y Video Circuito ER2". Reemplaza todos los emojis de la interfaz por la librería Google Material Icons. Incluye la etiqueta `<link>` correspondiente en el `<head>` y usa las etiquetas `<span class="material-icons">` (ej: `inventory_2`, `route`, `settings`, `share`, `arrow_back`).
+> 
+> **2. Inventario General (Vista por Defecto):**
+> En `app.js`, modifica la lógica del buscador. Cuando el input esté vacío, la pantalla no debe quedar en blanco. Implementa una función `renderInventory()` que dibuje listas o bloques iterando `db.equipos`, `db.cables` y `db.conexiones`. Cada elemento mostrado debe tener un `onclick` que ejecute la vista de detalle de ese ID en particular.
+> 
+> **3. Vista "Nodo-Céntrica" (Reemplazo del trazado lineal):**
+> La función actual que traza la ruta lineal (1 -> 2 -> 3) no soporta ramas (ej: Consola sacando señal a Amp1, Amp2 y Amp3). Debes reescribir `renderDetailView(id)` para que funcione de manera "Nodo-Céntrica".
+> El diseño de la tarjeta debe ser así:
+> - **Encabezado:** Un botón de "Volver al Inventario" (`arrow_back`) que limpie el buscador y vuelva al inicio. A su lado, el ID y metadatos del Equipo (o Cable) central.
+> - **Cuerpo (Grid/Flexbox):**
+>   - **Columna Izquierda (ENTRADAS):** Busca en `db.conexiones` donde `ID_Destino === id`. Lista cada coincidencia mostrando: El `Puerto_Destino` del equipo central, el `Tipo_Senial`, y el `ID_Origen` que está conectado allí. El `ID_Origen` debe ser un botón clickeable para saltar hacia la ficha de ese equipo (Navegación en grafo).
+>   - **Centro:** Información estética o ícono del equipo.
+>   - **Columna Derecha (SALIDAS):** Busca en `db.conexiones` donde `ID_Origen === id`. Lista cada coincidencia mostrando: El `Puerto_Origen` de salida, el `Tipo_Senial`, y el `ID_Destino` (clickeable para saltar hacia allá).
+> - De esta forma, el usuario verá al equipo en el centro, y a los lados todas sus ramas entrantes y salientes, pudiendo navegar por todo el diagrama paso a paso.

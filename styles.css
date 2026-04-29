@@ -400,6 +400,154 @@ input[type="text"]:focus {
   color: var(--text-primary);
 }
 
+/* Node-Centric View */
+.node-grid {
+  display: grid;
+  grid-template-columns: 1fr 120px 1fr;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 480px) {
+  .node-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+.node-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.node-column h4 {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.conn-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  padding: 0.8rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  position: relative;
+}
+
+.conn-port {
+  font-weight: 700;
+  color: var(--accent-cyan);
+  display: block;
+}
+
+.conn-type {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.jump-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  color: var(--accent-purple);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.jump-btn:hover {
+  text-decoration: underline;
+}
+
+.node-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
+  background: rgba(0, 242, 255, 0.05);
+  border-radius: 50%;
+  aspect-ratio: 1/1;
+  border: 1px solid var(--accent-cyan);
+}
+
+.node-center .material-icons {
+  font-size: 2.5rem;
+  color: var(--accent-cyan);
+}
+
+/* Inventory View */
+.inventory-section {
+  margin-top: 1rem;
+}
+
+.inventory-group {
+  margin-bottom: 2rem;
+}
+
+.inventory-group h3 {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  padding-left: 0.5rem;
+  border-left: 3px solid var(--accent-purple);
+}
+
+.inventory-item {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  padding: 1rem;
+  border-radius: 12px;
+  margin-bottom: 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.inventory-item:hover {
+  transform: translateX(5px);
+  border-color: var(--accent-cyan);
+}
+
+.inventory-item .item-id {
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+.inventory-item .item-info {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* Back Button */
+.back-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Offline Indicator */
 .offline-status {
   background: var(--danger);

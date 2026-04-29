@@ -151,9 +151,13 @@ function renderResults(specificId = null) {
     const rawQuery = searchInput.value.trim().toUpperCase();
     resultsContainer.innerHTML = '';
 
-    if (!rawQuery && !specificId) return;
+    // Si el buscador está vacío y no hay ID específico, mostrar inventario
+    if (!rawQuery && !specificId) {
+        renderInventory();
+        return;
+    }
 
-    // Si viene de un clic en coincidencia múltiple
+    // Si viene de un clic en coincidencia múltiple o inventario
     if (specificId) {
         renderDetailView(specificId);
         return;
@@ -192,70 +196,132 @@ function renderResults(specificId = null) {
     }
 }
 
+function renderInventory() {
+    resultsContainer.innerHTML = '<div class="inventory-section"></div>';
+    const container = resultsContainer.querySelector('.inventory-section');
+
+    const sections = [
+        { title: 'Equipos', data: db.equipos, idKey: 'ID_Equipo', icon: 'settings_input_component' },
+        { title: 'Cables', data: db.cables, idKey: 'ID_Cable', icon: 'settings_input_hdmi' }
+    ];
+
+    sections.forEach(section => {
+        if (section.data.length === 0) return;
+
+        const group = document.createElement('div');
+        group.className = 'inventory-group';
+        group.innerHTML = `<h3><span class="material-icons" style="font-size:1rem; vertical-align:middle; margin-right:5px">${section.icon}</span> ${section.title}</h3>`;
+
+        section.data.forEach(item => {
+            const id = item[section.idKey];
+            const nombre = item.Nombre || item.Tipo_Conector || 'S/D';
+            
+            const itemEl = document.createElement('div');
+            itemEl.className = 'inventory-item';
+            itemEl.innerHTML = `
+                <div>
+                    <div class="item-id">${id}</div>
+                    <div class="item-info">${nombre}</div>
+                </div>
+                <span class="material-icons" style="color:var(--text-secondary)">chevron_right</span>
+            `;
+            itemEl.onclick = () => renderResults(id);
+            group.appendChild(itemEl);
+        });
+        container.appendChild(group);
+    });
+}
+
+function clearSearch() {
+    searchInput.value = '';
+    renderResults();
+}
+
 function renderDetailView(id) {
-    const query = id;
     const itemInfo = getItemById(id);
-    const route = findFullRoute(id);
-    const mainConn = db.conexiones.find(c => c.ID_Origen === id || c.ID_Destino === id);
+    const inputs = db.conexiones.filter(c => c.ID_Destino === id);
+    const outputs = db.conexiones.filter(c => c.ID_Origen === id);
 
     const card = document.createElement('div');
     card.className = 'card';
 
-    // Header logic
-    let headerHTML = `<div class="card-header"><span class="card-id">${id}</span>`;
-    
-    if (currentMode === 'ARMADO') {
-        const statusClass = mainConn?.Estado_Instalacion === 'Conectado' ? 'badge-done' : 'badge-pending';
-        headerHTML += `<span class="badge ${statusClass}">${mainConn?.Estado_Instalacion || 'S/D'}</span>`;
-    } else {
-        const status = itemInfo?.Estado_Logistica || 'Pendiente';
-        const statusClass = (status === 'Guardado' || status === 'Devuelto') ? 'badge-done' : 'badge-pending';
-        headerHTML += `<span class="badge ${statusClass}">${status}</span>`;
-    }
-    headerHTML += `</div>`;
+    // Header logic: Back button + ID
+    const headerHTML = `
+        <div class="back-header">
+            <button class="back-btn" onclick="clearSearch()">
+                <span class="material-icons">arrow_back</span>
+            </button>
+            <div>
+                <span class="card-id" style="font-size:1.4rem">${id}</span>
+                <div class="node-metadata">${itemInfo?.Nombre || itemInfo?.Tipo_Conector || ''}</div>
+            </div>
+        </div>
+    `;
 
-    let bodyHTML = '';
-    if (currentMode === 'ARMADO') {
-        bodyHTML = `
-            <div class="route-path">
-                ${route.map((nodeId, index) => {
-                    const nodeInfo = getItemById(nodeId);
-                    const nodeName = nodeInfo ? (nodeInfo.Nombre || nodeInfo.Tipo_Conector || '') : '';
-                    const nodeMeta = nodeInfo ? `${nodeInfo.Propietario || ''} | ${nodeInfo.Lugar_Guardado_Final || ''}` : '';
-                    
-                    return `
-                        <div class="route-node ${nodeId === id ? 'highlight' : ''}">
-                            <div>
-                                <strong>${nodeId}</strong>
-                                ${nodeName ? `<div class="node-metadata" style="font-weight:400">${nodeName}</div>` : ''}
-                                ${nodeMeta ? `<div class="node-metadata">${nodeMeta}</div>` : ''}
-                            </div>
+    // Center Icon logic
+    const isCable = id.startsWith('CBL');
+    const centerIcon = isCable ? 'settings_input_hdmi' : 'settings_input_component';
+
+    // Grid: Inputs | Center | Outputs
+    const bodyHTML = `
+        <div class="node-grid">
+            <!-- Columna Izquierda: ENTRADAS -->
+            <div class="node-column">
+                <h4>Entradas</h4>
+                ${inputs.length > 0 ? inputs.map(c => `
+                    <div class="conn-item">
+                        <span class="conn-port">${c.Puerto_Destino || 'Input'}</span>
+                        <span class="conn-type">${c.Tipo_Senial || ''}</span>
+                        <div class="jump-btn" onclick="renderResults('${c.ID_Origen}')">
+                            <span class="material-icons">link</span> ${c.ID_Origen}
                         </div>
-                        ${index < route.length - 1 ? '<div class="route-arrow">⬇</div>' : ''}
-                    `;
-                }).join('')}
+                    </div>
+                `).join('') : '<p style="text-align:center; font-size:0.8rem; color:var(--text-secondary)">Sin entradas</p>'}
             </div>
-            <button class="action-btn btn-primary" onclick="handleUpdatePatch('${mainConn?.ID_Patch}')" ${!mainConn ? 'disabled' : ''}>
-                Marcar como Conectado
-            </button>
-        `;
-    } else {
-        // MODO DESARME
-        const owner = itemInfo?.Propietario || 'Desconocido';
-        const storage = itemInfo?.Lugar_Guardado_Final || 'S/D';
-        const isOwn = owner.toLowerCase().includes('propio') || owner.toLowerCase().includes('empresa');
-        
-        bodyHTML = `
-            <div style="margin-bottom: 1rem">
-                <p><small>Propietario:</small> <strong>${owner}</strong></p>
-                <p><small>Guardar en:</small> <strong>${storage}</strong></p>
+
+            <!-- Centro: Equipo -->
+            <div class="node-center">
+                <span class="material-icons">${centerIcon}</span>
+                <div style="font-size:0.7rem; margin-top:5px; color:var(--accent-cyan); font-weight:700">
+                    ${currentMode}
+                </div>
             </div>
-            <button class="action-btn ${isOwn ? 'btn-success' : 'btn-warning'}" 
-                    onclick="handleUpdateLogistica('${id}', '${isOwn ? 'Guardado' : 'Devuelto'}')">
-                Marcar como ${isOwn ? 'Guardado' : 'Devuelto'}
-            </button>
-        `;
-    }
+
+            <!-- Columna Derecha: SALIDAS -->
+            <div class="node-column">
+                <h4>Salidas</h4>
+                ${outputs.length > 0 ? outputs.map(c => `
+                    <div class="conn-item">
+                        <span class="conn-port">${c.Puerto_Origen || 'Output'}</span>
+                        <span class="conn-type">${c.Tipo_Senial || ''}</span>
+                        <div class="jump-btn" onclick="renderResults('${c.ID_Destino}')">
+                            ${c.ID_Destino} <span class="material-icons">link</span>
+                        </div>
+                        ${currentMode === 'ARMADO' ? `
+                            <div style="margin-top:5px; border-top:1px solid var(--border-color); padding-top:5px">
+                                <span class="badge ${c.Estado_Instalacion === 'Conectado' ? 'badge-done' : 'badge-pending'}" 
+                                      style="cursor:pointer; font-size:0.6rem" 
+                                      onclick="handleUpdatePatch('${c.ID_Patch}')">
+                                    ${c.Estado_Instalacion}
+                                </span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('') : '<p style="text-align:center; font-size:0.8rem; color:var(--text-secondary)">Sin salidas</p>'}
+            </div>
+        </div>
+
+        ${currentMode === 'DESARME' ? `
+            <div class="card" style="margin-top:1.5rem; background:rgba(255,255,255,0.02)">
+                <p><small>Propietario:</small> <strong>${itemInfo?.Propietario || 'Desconocido'}</strong></p>
+                <p><small>Guardar en:</small> <strong>${itemInfo?.Lugar_Guardado_Final || 'S/D'}</strong></p>
+                <button class="action-btn btn-primary" style="margin-top:10px" 
+                        onclick="handleUpdateLogistica('${id}', '${itemInfo?.Propietario?.toLowerCase().includes('propio') ? 'Guardado' : 'Devuelto'}')">
+                    Marcar Logística
+                </button>
+            </div>
+        ` : ''}
+    `;
 
     card.innerHTML = headerHTML + bodyHTML;
     resultsContainer.appendChild(card);

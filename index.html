@@ -3,12 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Circuito AV Tech</title>
+    <title>Audio y Video Circuito ER2</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- QR Library -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
@@ -17,8 +19,8 @@
 
     <nav class="navbar">
         <div class="nav-content">
-            <button id="menuBtn" class="menu-btn">☰</button>
-            <h1 class="nav-title">Circuito AV Tech</h1>
+            <button id="menuBtn" class="menu-btn"><span class="material-icons">menu</span></button>
+            <h1 class="nav-title">Audio y Video Circuito ER2</h1>
             <div id="activeModeDisplay" class="mode-indicator">ARMADO</div>
         </div>
     </nav>
@@ -28,22 +30,22 @@
         <div class="side-menu-content">
             <div class="side-menu-header">
                 <h2>Menú</h2>
-                <button id="closeMenuBtn" class="close-btn">&times;</button>
+                <button id="closeMenuBtn" class="close-btn"><span class="material-icons">close</span></button>
             </div>
             <div class="menu-section">
                 <h3>Modos</h3>
-                <button class="menu-item" onclick="setMode('ARMADO')">📍 Modo Armado</button>
-                <button class="menu-item" onclick="setMode('DESARME')">📦 Modo Desarme</button>
-                <button class="menu-item" onclick="setMode('ADMIN')">⚙️ Modo Admin</button>
+                <button class="menu-item" onclick="setMode('ARMADO')"><span class="material-icons">route</span> Modo Armado</button>
+                <button class="menu-item" onclick="setMode('DESARME')"><span class="material-icons">inventory_2</span> Modo Desarme</button>
+                <button class="menu-item" onclick="setMode('ADMIN')"><span class="material-icons">settings</span> Modo Admin</button>
             </div>
             <div class="menu-section">
                 <h3>Referencias</h3>
-                <a href="https://github.com/entrerios2/entrerios2.github.io/tree/main/Especificaciones_Instalacion" target="_blank" class="menu-item">📐 Diagramas</a>
-                <a href="https://github.com/entrerios2/entrerios2.github.io/tree/main/Manuales" target="_blank" class="menu-item">📖 Manuales</a>
+                <a href="https://github.com/entrerios2/entrerios2.github.io/tree/main/Especificaciones_Instalacion" target="_blank" class="menu-item"><span class="material-icons">map</span> Diagramas</a>
+                <a href="https://github.com/entrerios2/entrerios2.github.io/tree/main/Manuales" target="_blank" class="menu-item"><span class="material-icons">description</span> Manuales</a>
             </div>
             <div class="menu-section">
                 <h3>Acciones</h3>
-                <button class="menu-item" onclick="shareApp()">🔗 Compartir App</button>
+                <button class="menu-item" onclick="shareApp()"><span class="material-icons">share</span> Compartir App</button>
             </div>
         </div>
     </div>
@@ -53,8 +55,8 @@
 
         <!-- Search Section -->
         <div class="search-container">
-            <input type="text" id="searchInput" placeholder="Busca ID de equipo o cable..." autocomplete="off">
-            <button class="qr-btn" id="qrStartBtn" title="Escanear QR">📸</button>
+            <input type="text" id="searchInput" placeholder="Busca ID o Nombre..." autocomplete="off">
+            <button class="qr-btn" id="qrStartBtn" title="Escanear QR"><span class="material-icons">qr_code_scanner</span></button>
         </div>
 
         <!-- Admin Panel (Hidden by default) -->
