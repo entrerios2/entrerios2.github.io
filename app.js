@@ -562,7 +562,7 @@ qrStartBtn.addEventListener('click', () => {
     });
 });
 
-searchInput.addEventListener('input', renderResults);
+searchInput.addEventListener('input', () => renderResults());
 
 window.addEventListener('online', () => {
     updateOfflineStatus();
