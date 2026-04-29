@@ -26,7 +26,27 @@
     </nav>
 
     <div id="sideMenu" class="side-menu">
-        <!-- ... existing menu ... -->
+        <div class="side-menu-content">
+            <div class="side-menu-header">
+                <h2>Menú</h2>
+                <button id="closeMenuBtn" class="close-btn"><span class="material-icons">close</span></button>
+            </div>
+            <div class="menu-section">
+                <h3>Modos</h3>
+                <button class="menu-item" onclick="setMode('ARMADO')"><span class="material-icons">route</span> Modo Armado</button>
+                <button class="menu-item" onclick="setMode('DESARME')"><span class="material-icons">inventory_2</span> Modo Desarme</button>
+                <button class="menu-item" onclick="setMode('ADMIN')"><span class="material-icons">settings</span> Modo Admin</button>
+            </div>
+            <div class="menu-section">
+                <h3>Referencias</h3>
+                <a href="https://github.com/entrerios2/entrerios2.github.io/tree/main/Especificaciones_Instalacion" target="_blank" class="menu-item"><span class="material-icons">map</span> Diagramas</a>
+                <a href="https://github.com/entrerios2/entrerios2.github.io/tree/main/Manuales" target="_blank" class="menu-item"><span class="material-icons">description</span> Manuales</a>
+            </div>
+            <div class="menu-section">
+                <h3>Acciones</h3>
+                <button class="menu-item" onclick="shareApp()"><span class="material-icons">share</span> Compartir App</button>
+            </div>
+        </div>
     </div>
 
     <div class="desktop-wrapper">
@@ -76,6 +96,12 @@
 
     <!-- Hidden original forms to be moved dynamically -->
     <div style="display: none;">
+        <datalist id="list_categorias"></datalist>
+        <datalist id="list_ubicaciones"></datalist>
+        <datalist id="list_propietarios"></datalist>
+        <datalist id="list_lugares"></datalist>
+        <datalist id="list_conectores"></datalist>
+
         <form id="formEquipo" class="admin-tab-content">
             <input type="hidden" name="isEdit" value="false">
             <input type="text" name="id" id="equip_id" placeholder="ID (ej: XR-01)" required>

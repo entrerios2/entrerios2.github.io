@@ -154,6 +154,47 @@ function getItemById(id) {
 /**
  * 3. Renderizado de Interfaz
  */
+function clearSearch() {
+    searchInput.value = '';
+    renderResults();
+}
+
+function renderInventory() {
+    resultsContainer.innerHTML = '<div class="inventory-section"></div>';
+    const container = resultsContainer.querySelector('.inventory-section');
+
+    const sections = [
+        { title: 'Equipos', data: db.equipos, idKey: 'ID_Equipo', icon: 'speaker' },
+        { title: 'Cables', data: db.cables, idKey: 'ID_Cable', icon: 'cable' }
+    ];
+
+    sections.forEach(section => {
+        if (section.data.length === 0) return;
+
+        const group = document.createElement('div');
+        group.className = 'inventory-group';
+        group.innerHTML = `<h3><span class="material-icons" style="font-size:1rem; vertical-align:middle; margin-right:5px">${section.icon}</span> ${section.title}</h3>`;
+
+        section.data.forEach(item => {
+            const id = item[section.idKey];
+            const nombre = item.Nombre || item.Tipo_Conector || 'S/D';
+            
+            const itemEl = document.createElement('div');
+            itemEl.className = 'inventory-item';
+            itemEl.innerHTML = `
+                <div>
+                    <div class="item-id">${id}</div>
+                    <div class="item-info">${nombre}</div>
+                </div>
+                <span class="material-icons" style="color:var(--text-secondary)">chevron_right</span>
+            `;
+            itemEl.onclick = () => renderResults(id);
+            group.appendChild(itemEl);
+        });
+        container.appendChild(group);
+    });
+}
+
 function renderResults(specificId = null) {
     const rawQuery = searchInput.value.trim().toUpperCase();
     resultsContainer.innerHTML = '';
@@ -610,9 +651,7 @@ document.getElementById('equip_cat')?.addEventListener('input', () => autoGenera
 document.getElementById('equip_nombre')?.addEventListener('input', () => autoGenerateId('equipo'));
 document.getElementById('cable_tipo')?.addEventListener('input', () => autoGenerateId('cable'));
 
-    });
-    console.log('Action sent to server (no-cors mode)');
-}
+
 
 function queueAction(action) {
     const queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
@@ -628,7 +667,7 @@ async function syncQueue() {
     console.log(`Syncing ${queue.length} actions...`);
     for (const action of queue) {
         try {
-            await sendToServer(action);
+            await sendToServer(action.action, action.body);
         } catch (e) {
             console.error('Failed to sync action', action);
         }
