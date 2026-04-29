@@ -1,0 +1,7 @@
+ID_Cable,Tipo_Conector,Longitud_m,Propietario,Lugar_Guardado_Final,Estado_Logistica,Notas
+CBL-XLR-001,XLR Macho-Hembra,50,Propio,Baul Cables Largos,En Uso,Reservado para tirada principal
+CBL-XLR-002,XLR Macho-Hembra,50,Propio,Baul Cables Largos,En Uso,Reservado para tirada principal
+CBL-XLR-003,XLR Macho-Hembra,28,Audio CPC,-,Devuelto,Reservado para Delay 1
+CBL-XLR-004,XLR Macho-Hembra,28,Audio CPC,-,Devuelto,Reservado para Delay 2
+CBL-VID-001,SDI a SDI,50,Propio,Rack Video,Guardado,Camara principal
+CBL-RED-001,UTP Cat5,42,Propio,Caja Redes,Guardado,Conexion FOH a Escenario

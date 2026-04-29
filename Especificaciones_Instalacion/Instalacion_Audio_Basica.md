@@ -77,4 +77,4 @@ graph TD
 
 1. **Cálculo de Delays:** Las medidas físicas (metros de distancia) para los *Delay Line 1* y *2* deben medirse en el salón en relación al PA. Dichos valores serán convertidos a Milisegundos e introducidos en la XR12 (Configuración Dual Pitch - FX1).
 2. **Niveles de Operación Seguros:** El Bus 6 lleva un limitador duro de señal. Es necesario configurar la ganancia de entrada de micrófono del Blackmagic ATEM Mini al 50% y empujar los faders desde la XR12 para prevenir cualquier clip o distorsión remota.
-3. **Logística de Cableado:** Hay 68 cables disponibles. Se recomienda reservar inmediatamente los dos cables XLR extra-largos de **50m** y los dos de **28m** exclusivamente para conectar la lejanía del PA Principal y el Front Delay Line 1 antes de usar cables empalmados.
+3. **Logística de Cableado:** Hay 41 cables XLR disponibles. Se recomienda reservar inmediatamente los cables XLR extra-largos de **50m** exclusivamente para conectar la lejanía del PA Principal y el Front Delay Line 1 antes de usar cables empalmados.

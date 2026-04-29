@@ -1,0 +1,8 @@
+ID_Equipo,Nombre,Categoria,Ubicacion_Uso,Propietario,Lugar_Guardado_Final,Estado_Logistica,Notas
+XR-01,Consola Behringer XR12,Consola de Audio,FOH,Propio,Rack Principal,Guardado,
+BAF-PA-L,DB Opera 710dx (PA Frontal Izq),Parlante Activo,Escenario Frontal,Alquilado Empresa X,-,Devuelto,
+BAF-PA-R,DB Opera 710dx (PA Frontal Der),Parlante Activo,Escenario Frontal,Alquilado Empresa X,-,Devuelto,
+BAF-DLY-1,RCF ART 310-A (Delay Line 1),Parlante Activo,Centro Salon,Propio,Bodega Sotano,En Uso,
+MIC-AT-1,Sennheiser e965 (Atril Principal),Mic Condensador,Escenario Atril,Juan Perez,-,Devuelto,
+MIC-AT-2,Sennheiser e835 (Atril Sec),Mic Dinamico,Escenario Atril,Propio,Caja Microfonos 1,En Uso,
+VID-ATEM,Blackmagic ATEM Mini Pro,Video Switcher,FOH,Propio,Rack Video,Guardado,

@@ -68,26 +68,22 @@
 - **1x** Medusa XLR a RJ45 (4x Hembra, Cable en rack)
 
 ### Cableado de Audio (XLR)
-*Consolidado del inventario general y recuento detallado (CPC).*
+*Basado en el Inventario General.*
 
-| Longitud | Cantidad Total |
+| Longitud | Cantidad |
 |:---:|:---:|
 | **50m** | 4 |
-| **28m** | 2 |
-| **16m** | 2 |
-| **12m** | 4 |
-| **11m** | 9 |
-| **10m** | 10 |
-| **9m** | 4 |
-| **8m** | 1 |
-| **7.5m**| 3 |
+| **16m** | 1 |
+| **12m** | 3 |
+| **11m** | 5 |
+| **10m** | 8 |
+| **9m** | 2 |
 | **7m** | 1 |
-| **5m** | 16 |
-| **3m** | 6 |
-| **2.5m**| 2 |
-| **2m** | 3 |
+| **5m** | 14 |
+| **3m** | 1 |
+| **2m** | 1 |
 | **1m** | 1 |
-| **Total** | **68 Cables XLR** |
+| **Total** | **41 Cables XLR** |
 
 ### Cableado de Video, Red y Auxiliares
 
@@ -110,7 +106,9 @@
 | **Jack 3.5mm a XLR M** | 2 | 1x 5m, 1x 2m |
 | **Adaptador XLR-H a Jack 1/4" Bal**| 5 | |
 | **Adaptador XLR-M a Jack 1/4" Unbal**| 3 | |
-| **Splitter Y (XLR H a 2x XLR M)** | 2 | |
+| **Adaptador XLR-H a Jack 3.5mm M**| 3 | |
+| **Adaptador XLR-M a Jack 3.5mm M**| 5 | |
+| **Splitter Y (XLR H a 2x XLR M)** | 5 | |
 | **Splitter (XLR 1M a 2x XLR H)** | 3 | |
 
 ---

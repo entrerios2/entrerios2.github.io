@@ -1,0 +1,10 @@
+ID_Patch,ID_Origen,Puerto_Origen,ID_Destino,Puerto_Destino,Tipo_Senial,Estado_Instalacion
+001,MIC-AT-1,XLR,CBL-XLR-010,Hembra,Audio Analogo,Pendiente
+002,CBL-XLR-010,Macho,MEDUSA-01,In 1,Audio Analogo,Pendiente
+003,MEDUSA-01,Out 1,CBL-XLR-MED,Hembra,Audio Analogo,Pendiente
+004,CBL-XLR-MED,Macho,XR-01,Input 1,Audio Analogo,Pendiente
+005,XR-01,MAIN L,CBL-XLR-001,Hembra,Audio Analogo,Pendiente
+006,CBL-XLR-001,Macho,BAF-PA-L,Input,Audio Analogo,Pendiente
+007,XR-01,MAIN R,CBL-XLR-002,Hembra,Audio Analogo,Pendiente
+008,CBL-XLR-002,Macho,CBL-XLR-003,Hembra,Audio Analogo,Pendiente
+009,CBL-XLR-003,Macho,BAF-DLY-1,Input,Audio Analogo,Pendiente
