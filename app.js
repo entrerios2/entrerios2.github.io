@@ -133,20 +133,32 @@ function findFullRoute(targetId) {
  * 3. Renderizado de Interfaz
  */
 function renderResults() {
-    const query = searchInput.value.trim().toUpperCase();
+    const rawQuery = searchInput.value.trim().toUpperCase();
     resultsContainer.innerHTML = '';
 
-    if (!query) return;
+    if (!rawQuery) return;
 
     // Filter connections where query matches ID_Origen or ID_Destino
     // OR search in cables/equipos
+    
+    // Resolver búsqueda por nombre o ID
+    let query = rawQuery;
+    const resolvedItem = [...db.equipos, ...db.cables].find(i => 
+        ((i.ID_Equipo || i.ID_Cable) === rawQuery) || 
+        ((i.Nombre && i.Nombre.toUpperCase().includes(rawQuery)) || 
+         (i.Tipo_Conector && i.Tipo_Conector.toUpperCase().includes(rawQuery)))
+    );
+    if (resolvedItem) {
+        query = resolvedItem.ID_Equipo || resolvedItem.ID_Cable;
+    }
+
     const route = findFullRoute(query);
     
     const hasConnections = db.conexiones.some(c => c.ID_Origen === query || c.ID_Destino === query);
-    const itemInfo = [...db.equipos, ...db.cables].find(i => (i.ID_Equipo || i.ID_Cable) === query);
+    const itemInfo = resolvedItem || [...db.equipos, ...db.cables].find(i => (i.ID_Equipo || i.ID_Cable) === query);
 
     if (!hasConnections && !itemInfo) {
-        resultsContainer.innerHTML = `<div class="card" style="text-align:center">No se encontró el ID "${query}"</div>`;
+        resultsContainer.innerHTML = `<div class="card" style="text-align:center">No se encontró el ID o Nombre "${rawQuery}"</div>`;
         return;
     }
 
@@ -171,7 +183,18 @@ function renderResults() {
 
     let bodyHTML = '';
     if (currentMode === 'ARMADO') {
+        let detailsHtml = '';
+        if (itemInfo) {
+            const nombre = itemInfo.Nombre || itemInfo.Tipo_Conector || '';
+            const ubicacion = itemInfo.Ubicacion_Uso || (itemInfo.Longitud_m ? `(${itemInfo.Longitud_m}m)` : '');
+            detailsHtml = `<div style="margin-bottom: 1rem; color: #ccc; font-size: 0.9rem;">
+                ${nombre ? `<strong>Detalle:</strong> ${nombre}<br>` : ''}
+                ${ubicacion ? `<strong>Ubicación/Info:</strong> ${ubicacion}` : ''}
+            </div>`;
+        }
+
         bodyHTML = `
+            ${detailsHtml}
             <div class="route-path">
                 ${route.map((id, index) => `
                     <div class="route-node ${id === query ? 'highlight' : ''}">
@@ -231,7 +254,9 @@ function updateSelects() {
     
     const options = [...db.equipos, ...db.cables].map(item => {
         const id = item.ID_Equipo || item.ID_Cable;
-        return `<option value="${id}">${id}</option>`;
+        const nombre = item.Nombre || item.Tipo_Conector || '';
+        const displayName = nombre ? `${id} (${nombre})` : id;
+        return `<option value="${id}">${displayName}</option>`;
     }).join('');
 
     const placeholder = '<option value="">-- Seleccionar --</option>';
@@ -324,15 +349,30 @@ async function processAction(action) {
     localStorage.setItem('av_tech_db', JSON.stringify(db));
     renderResults();
 
+    const originalText = searchInput.placeholder;
+    searchInput.placeholder = "Enviando a la base...";
+    searchInput.disabled = true;
+
     if (navigator.onLine) {
         try {
             await sendToServer(action);
+            // Feedback visual exitoso
+            const btns = document.querySelectorAll('.card .action-btn, #adminPanel .action-btn');
+            btns.forEach(btn => {
+                const oldText = btn.innerText;
+                btn.innerText = "¡Enviado!";
+                btn.classList.add('btn-success');
+                setTimeout(() => { btn.innerText = oldText; btn.classList.remove('btn-success'); }, 2000);
+            });
         } catch (e) {
             queueAction(action);
         }
     } else {
         queueAction(action);
     }
+
+    searchInput.placeholder = originalText;
+    searchInput.disabled = false;
 }
 
 async function sendToServer(action) {
