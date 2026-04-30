@@ -159,3 +159,147 @@ Copia y pega los siguientes prompts en tu nuevo agente para generar el código s
 > Agrega un botón "Conectar" / "Desconectar" que envíe un POST `UPDATE_PATCH`. 
 > Si esa conexión está "Conectado", pinta el bloque o flecha de **Verde sólido**. Si es "Pendiente", de **Gris oscuro punteado**. Esto dará feedback visual instantáneo del progreso.
 
+---
+
+### PROMPT 8: Refinamiento de UI, Árbol Colapsable y Corrección de Bugs
+*Copiá este texto y pasáselo a Gemini Flash para corregir el ancho de pantalla, el guardado de datos y perfeccionar la vista.*
+
+> **Actúa sobre el código de la SPA (`index.html`, `app.js` y `styles.css`).**
+> Necesito implementar una serie de refactorizaciones para corregir bugs recientes y mejorar dramáticamente la usabilidad de la interfaz:
+> 
+> **1. Corrección del Bug de Guardado (Mapeo de Campos):**
+> En `app.js`, al crear/editar (en `handleAction`), estás guardando en `db` el objeto directo del `FormData` (ej. `nombre`, `ubicacion`). Pero la base de datos usa mayúsculas (`Nombre`, `Ubicacion_Uso`, `Categoria`).
+> Por favor, crea un mapeador exacto dentro de `handleAction` para que las claves del formulario se conviertan a las claves reales que usamos en el backend antes de hacer `push` o actualizar el estado local `db` y antes de enviarlo al servidor.
+> 
+> **2. Expansión del Diseño Desktop:**
+> En `styles.css`, modifica `.desktop-wrapper` para que su `max-width` sea mucho más amplio (ej. `1200px` o `1400px`). En pantallas grandes, las tablas de administración y el inventario deben ocupar casi todo el ancho disponible para ser navegables.
+> 
+> **3. Inventario Principal como Tablas:**
+> En `app.js`, actualiza la función `renderInventory()` (la que se muestra cuando el buscador está vacío). En lugar de usar `.inventory-item` (tarjetas), debe renderizar la vista usando exactamente las mismas Tablas HTML (con `thead` y `tbody`) que usas en el modo Admin, permitiendo ordenar columnas y aprovechar el ancho.
+> 
+> **4. Recuperar Botones de Logística y Estado:**
+> - En **Modo Desarme**, asegúrate de renderizar en el nodo central del árbol el botón de "Marcar Logística (Guardado/Devuelto)" que actualice el campo `Estado_Logistica` en la base.
+> - En **Modo Armado**, asegúrate de que exista un botón claro en el equipo para marcar la conexión como "Conectado / Pendiente".
+> 
+> **5. Árbol de Conexiones Visual (Puertos en los bordes) y Colapsable:**
+> Modifica `renderTree()` y tu CSS para que el árbol sea mucho más estético, parecido a equipos físicos conectados:
+> - **Puertos en los bordes:** En lugar de mostrar la conexión flotando sola entre dos equipos, integra visualmente la información de los puertos en los bordes de la "caja" del equipo. Es decir, usando CSS (con position `relative` en el equipo y `absolute` en los puertos), coloca un pequeño bloque o pastilla en el borde superior del equipo central que indique su puerto de ENTRADA, y una pastilla en el borde inferior que indique su puerto de SALIDA.
+> - **Múltiples Puertos como Dropdown:** Esta misma pastilla en el borde del equipo debe ser el `<select>` nativo si es que el equipo tiene múltiples salidas o entradas. Al cambiar el dropdown, redibuja la ruta.
+> - **Colapsable:** Por defecto, dibuja solo **un (1) nivel hacia arriba** y **un (1) nivel hacia abajo** del equipo central. Agrega un botón tipo `[+ Expandir]` para cargar los siguientes niveles y no saturar.
+> 
+> **6. Prevención de Caché (Cache Busting):**
+> En `index.html`, agrégale a las etiquetas link de `styles.css` y `app.js` un parámetro aleatorio o de versión (ej. `?v=3.0`) para evitar el cache de GitHub Pages al publicar.
+
+---
+
+### PROMPT 9: Evolución de Diseño, Listado de Puertos e Inventario Desarme
+*Copiá este texto y pasáselo a Gemini Flash para implementar el listado avanzado de puertos, centrado del grafo y las vistas de Desarme.*
+
+> **Actúa sobre el código de la SPA (`index.html`, `app.js` y `styles.css`).**
+> Debes aplicar las siguientes mejoras masivas a la interfaz y lógica visual:
+>
+> **1. Fluidez Total en Desktop:**
+> En `styles.css`, la clase `.container` tiene un candado de `max-width: 600px;` que rompe todo el diseño en PC. Quita o cambia el max-width de `.container` a `100%` para que la clase superior (`.desktop-wrapper`) sea la que dictamine el ancho de pantalla. El diseño debe verse expansivo.
+>
+> **2. Tabla de Conexiones y Vistas de Desarme (`renderInventory`):**
+> - Agrega una tercera sección a la función `renderInventory()` que dibuje la **Tabla de Conexiones** (iterando sobre `db.conexiones`), exactamente con el mismo formato que las de equipos y cables.
+> - **Filtro de Desarme:** Si `currentMode === 'DESARME'`, el inventario no debe mostrar las tablas por defecto. Debe mostrar dos botones arriba: `[Ver Tablas]` y `[Ver por Contenedor]`. La vista de "Contenedor" debe agrupar los equipos y cables visualmente por su campo `Lugar_Guardado_Final`. Los que no tengan lugar asignado, colócalos en "Sin Asignar".
+>
+> **3. Rediseño Absoluto de la Ficha Central (`renderTreeNode`):**
+> Transforma el HTML del nodo central:
+> - Mueve el **Botón Volver Atrás** fuera (arriba) de la caja del equipo para que no quite espacio.
+> - En el encabezado interior, coloca el **Nombre del Equipo** seguido inmediatamente a su derecha por la pastilla del **ID**.
+> - Haz la sección de metadatos ultra-compacta, usando íconos de Material (`person`, `location_on`, `inventory`) con `title="..."` en vez de texto verboso ("Propietario:", "Ubicación:"). Reduce el espaciado y margin.
+> - Elimina cualquier botón de "instrucciones".
+> - **Listado de Puertos (2 Columnas):** Debajo de la info del equipo, crea dos columnas: Izquierda (ENTRADAS) y Derecha (SALIDAS). Lista todos los puertos usando el formato: `[Icono IN/OUT] NombrePuerto -> [Aparato al que conecta]`. 
+> - Si el puerto está desconectado, que el texto/borde sea **Rojo (danger)**. Si está conectado, **Verde (success)**.
+> - Agrega en cada línea de ese listado un pequeño control (checkbox o mini botón toggle) que dispare la conexión/desconexión directamente desde allí.
+>
+> **4. Grafo y Cableado (Semáforo y Centrado):**
+> - En `styles.css` y `renderTreeConnection`: Asegúrate de que `.connection-jump` sea un flex-box perfectamente alineado al centro. La flecha debe cruzar por el medio sin desviarse.
+> - El **Tipo de Señal** (`conn.Tipo_Senial`) debe mostrarse como una pequeña pastilla oscura (pill) superpuesta y centrada exactamente sobre el cable/flecha.
+> - Reemplaza los colores "Gris/Verde" del semáforo. Lo que no está conectado es **Rojo**, lo que sí, es **Verde**. Aplica estos colores a los cables, flechas y los bordes de los puertos `IN/OUT`.
+> - Reemplaza los enormes botones de texto `[+ Expandir Origen/Destino]` por simples y estéticos botones que contengan los iconos `keyboard_double_arrow_up` y `keyboard_double_arrow_down`.
+> - En los puertos en los bordes de las cajas, agrega el icono `login` (para entradas) y `logout` (para salidas).
+
+---
+
+### PROMPT 10: TAREA EXHAUSTIVA DE UX, BUGS Y ESTILOS (¡NO OMITIR NADA!)
+*Pasale este prompt a tu agente. Está redactado específicamente para obligarlo a no saltearse ninguna directiva.*
+
+> **MUY IMPORTANTE:** He tenido problemas con omisiones en respuestas anteriores. Actúa como un desarrollador Senior Frontend sobre la SPA (`index.html`, `app.js` y `styles.css`). Te daré una lista de tareas exactas. Debes implementar **ABSOLUTAMENTE TODAS**, línea por línea.
+>
+> **TAREA 1: Terminología y Navegación Básica**
+> - [ ] Reemplaza toda mención de "Lugar" y "Lugar Guardado" por **"Contenedor"** (en UI, placeholders y textos).
+> - [ ] Menú lateral: El título (header) debe ser "Audio y video ER2". Los ítems deben ser "Armado", "Desarme", "Administración", "Compartir". Remueve la palabra "Modo".
+> - [ ] Barra de Navegación: El título central dinámico dirá exactamente la vista en la que está (Armado, Desarme, Administración).
+> - [ ] **Botón Atrás (Navegador):** Implementa `history.pushState` y escucha `window.onpopstate` para que tocar "Atrás" en el teléfono/PC vuelva a la vista del inventario anterior en lugar de sacar al usuario de la SPA.
+> 
+> **TAREA 2: Nueva Barra Superior y Feedback de Conexión**
+> - [ ] Oculta por defecto el `<input>` de búsqueda. 
+> - [ ] En la navbar pon un **icono de lupa** y el de código QR. Tocar la lupa debe desplegar el input de búsqueda fluídamente.
+> - [ ] Elimina el banner fijo rojo de offline. En su lugar, agrega un ícono `cloud_off` súper estético incrustado en la navbar que aparezca solo si se corta la internet.
+>
+> **TAREA 3: Ficha Central y Checkboxes (UI Avanzada)**
+> - [ ] Mueve el botón "X" o flecha para cerrar la ficha *adentro* de la tarjeta, en la esquina superior derecha (`position: absolute`).
+> - [ ] Título de la Ficha: Muestra `[Icono altavoz o cable] Nombre del Equipo [Pastilla ID]`.
+> - [ ] **Estado Logístico Interactivo:** Convierte el texto fijo de Estado en un `<select>` nativo con las opciones: `Guardado`, `Devuelto`, `Instalado`, `Preparado para instalar`, `Preparado para guardar`. Al cambiar el valor, que llame a la función de guardado en la base de datos.
+> - [ ] Agrega `word-wrap: break-word` a los textos de los puertos `IN`/`OUT` para que no desborden la tarjeta.
+> - [ ] **Checkboxes:** Estiliza el checkbox de conexión a nivel profesional. Al presionarlo, deshabilítalo temporalmente o aplícale un efecto visual de "Cargando..." (feedback de transacción) hasta que el backend (la función local de DB) termine y confirme.
+> - [ ] En toda la app: Muestra skeletons o *placeholders* cuando carga data inicial de la DB, para evitar la pantalla congelada.
+>
+> **TAREA 4: Listados Colapsables y Selectores INDIVIDUALES**
+> - [ ] Elimina los viejos botones "Ver Tablas" / "Ver Contenedor" de Desarme.
+> - [ ] El inventario principal mostrará tres bloques colapsables base: **Equipos, Cables, Conexiones**.
+> - [ ] **CRÍTICO:** *Dentro* de cada uno de esos tres bloques, agrega un `<select>` de Agrupación independiente:
+>     - En Equipos: Categoría, Ubicación, Contenedor, Propietario, Estado.
+>     - En Cables: Conector, Longitud, Propietario, Contenedor, Estado.
+>     - En Conexiones: Origen, Destino, Tipo Señal, Estado.
+> - [ ] Al elegir una agrupación, la UI dibuja `<details>` (acordeones) para cada grupo (ej. Contenedor Anvil 1), inicialmente colapsados.
+> - [ ] **CRÍTICO 2:** Dentro de esos acordeones agrupados, los elementos *siempre* se renderizan como **Tabla HTML completa** con sus columnas, igual a como se ven normalmente.
+>
+> **TAREA 5: Mejora Premium de Admin y Fix de Mapeo**
+> - [ ] En `editItem()` (Administración), soluciona el bug de los campos en blanco creando un diccionario **mapeador inverso** exhaustivo. Las DB keys usan mayúsculas (`Nombre`, `Categoria`) y los input names son minúsculas (`nombre`, `categoria`). Relaciona todo para que el form cargue todos los datos.
+> - [ ] Esto solucionará el bug de que la pestaña "Ruteo" (conexiones) no abría la edición.
+> - [ ] **Estilo de Formularios Admin:** Aplica CSS Premium a los formularios de carga y edición (inputs espaciados, bordes redondeados suaves, enfoque fluído) para que no se vean como HTML básico por defecto. Remueve "Gestión de " de las pestañas (solo Equipos, Cables, Ruteo).
+
+
+---
+
+### PROMPT 11: UNIFICACIÓN OPERATIVA, TRAZABILIDAD Y REDISEÑO DE ADMIN
+*Pásale este prompt a tu agente de IA asegurándote de exigir la mayor rigurosidad posible.*
+
+> **REGLAS ESTRICTAS PARA ESTA ITERACIÓN:**
+> 1. NO borres ni simplifiques funciones que ya funcionan (como la búsqueda de grafos o los select de agrupación) a menos que se indique explícitamente.
+> 2. Cada vez que edites index.html, debes **obligatoriamente** aumentar la versión en los <link> y <script> (ej. ?v=4.0) para evitar la caché de GitHub Pages.
+> 3. Debes proveer el código completo de las funciones modificadas, no "recortes" incompletos.
+> 
+> **TAREA 1: Unificación a "Operación" e Identidad**
+> - Elimina las referencias a los modos "Armado" y "Desarme". Combínalos en un único modo llamado **"Operación"**.
+> - El menú lateral debe tener: Operación, Administración y Compartir.
+> - En startApp(), verifica si existe 	ech_name en localStorage. Si no existe, muestra un prompt() o modal obligatorio que diga "Ingrese su nombre para registrar los cambios". Guárdalo en localStorage.
+> 
+> **TAREA 2: Trazabilidad y Metadatos JSON (Inmutables)**
+> - Se asume una nueva columna en la base de datos llamada Metadatos. Este campo almacena un JSON stringificado con el esquema: { historial: [{timestamp: Number, nombre: String, detalle: String}], notas: [...] }.
+> - Crea una función helper logActivity(item, tipo, detalle) que tome el elemento, lea su JSON Metadatos (o lo inicialice), haga un .push() al array correspondiente (historial o 
+otas) usando Date.now(), el nombre local del técnico, y el detalle.
+> - Al realizar cualquier cambio de estado (ej. de Guardado a Instalado) o al parchear una conexión, inyecta automáticamente un registro en el historial.
+> - Las Notas **no se sobreescriben ni se borran**. Cuando el usuario guarda una nota desde la UI, simplemente hace un push al array 
+otas.
+> 
+> **TAREA 3: Ficha Central y Visualización de Trazabilidad**
+> - Debajo de los datos fijos en la ficha del nodo, muestra dos líneas de **resumen visual** usando íconos de Material Design:
+>   - <span class="material-icons">chat</span> Última nota: [Solo Fecha/Hora] [Detalle corto]
+>   - <span class="material-icons">history</span> Último mov: [Solo Fecha/Hora] [Detalle corto]
+>   *(Usa formato condicional de fecha: si es de hoy, muestra solo la hora, sino muestra dd/mm).*
+> - Muestra dos <details> colapsables:
+>   - **Historial de Movimientos:** Lista todos los registros de historial mostrando [Fecha/Hora] [Nombre]: [Detalle].
+>   - **Notas de Mantenimiento:** Lista todas las notas. Agrega allí mismo un <textarea> minimalista y un botón para "Agregar Nota".
+> 
+> **TAREA 4: Salto desde la Tabla de Conexiones**
+> - En el listado agrupado del inventario de "Operación", si el usuario hace clic sobre una fila de la tabla de **Conexiones**, invoca enderResults() pasándole el ID_Origen de esa conexión (o el destino), para que el usuario sea transportado al árbol de ruteo y pueda visualizar el contexto de lo que clickeó.
+> 
+> **TAREA 5: Rediseño Absoluto de Administración (Modo Espejo)**
+> - La interfaz de "Administración" debe ser un **espejo** de la interfaz de "Operación". Usa exactamente los mismos 3 bloques colapsables (Equipos, Cables, Conexiones), permitiendo agruparlos con los <select>.
+> - Al hacer clic en un elemento de estas tablas en Administración, se debe abrir el **Formulario de Edición** correspondiente (no la ficha de Operación).
+> - **Estilos de Formularios Premium:** Aplica CSS de alta gama a los formularios. Usa display: grid, inputs amplios con bordes redondeados suaves (order-radius: 8px), padding generoso, outline vibrante al hacer focus, y haz que se adapten fluidamente (1 columna en móvil, 2 columnas en desktop).
