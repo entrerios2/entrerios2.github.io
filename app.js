@@ -121,6 +121,7 @@ async function startApp() {
 
     await fetchData();
     populateDatalists();
+    updateSelects();
     
     // Check if there is an id or mode in URL for history state
     const urlParams = new URLSearchParams(window.location.search);
@@ -145,6 +146,7 @@ function loadLocalData() {
     const saved = localStorage.getItem('av_tech_db');
     if (saved) {
         db = JSON.parse(saved);
+        applyConfig();
     }
 }
 
@@ -158,8 +160,44 @@ async function fetchData() {
         db = data;
         localStorage.setItem('av_tech_db', JSON.stringify(db));
         console.log('DB Updated from server');
+        applyConfig();
     } catch (error) {
         console.warn('Could not fetch fresh data, using local cache', error);
+        applyConfig();
+    }
+}
+
+function applyConfig() {
+    if (!db.configuracion) return;
+
+    // 1. Título de la App
+    const titleConfig = db.configuracion.find(c => c.ID_Configuracion === 'nombre_pagina');
+    if (titleConfig && titleConfig.Valor) {
+        const titleEl = document.getElementById('appTitle');
+        if (titleEl) titleEl.innerText = titleConfig.Valor;
+        document.title = titleConfig.Valor;
+    }
+
+    // 2. Referencias en Sidebar (Metadatos: { "Titulo": { "icono": "...", "url": "..." } })
+    const refsConfig = db.configuracion.find(c => c.ID_Configuracion === 'referencias');
+    if (refsConfig && refsConfig.Metadatos) {
+        try {
+            const refsObj = JSON.parse(refsConfig.Metadatos);
+            const container = document.getElementById('sidebarReferences');
+            if (container) {
+                container.innerHTML = Object.entries(refsObj).map(([label, info]) => {
+                    const icon = info.icono || 'link';
+                    const url = info.url || '#';
+                    return `
+                        <a href="${url}" target="_blank" class="menu-item">
+                            <span class="material-icons">${icon}</span> ${label}
+                        </a>
+                    `;
+                }).join('');
+            }
+        } catch (e) {
+            console.error("Error parsing references config", e);
+        }
     }
 }
 
@@ -286,15 +324,15 @@ function renderInventory() {
     const sections = [
         { 
             type: 'equipos', title: 'Equipos', icon: 'speaker',
-            groups: [{val: '', label: 'Sin Agrupar'}, {val: 'Categoria', label: 'Categoría'}, {val: 'Ubicacion_Uso', label: 'Ubicación'}, {val: 'Lugar_Guardado_Final', label: 'Contenedor'}, {val: 'Propietario', label: 'Propietario'}, {val: 'Estado_Logistica', label: 'Estado'}]
+            groups: [{val: '', label: 'Sin Agrupar'}, {val: 'Categoria', label: 'Categoría'}, {val: 'Ubicacion', label: 'Ubicación'}, {val: 'Contenedor', label: 'Contenedor'}, {val: 'Propietario', label: 'Propietario'}, {val: 'Estado', label: 'Estado'}]
         },
         { 
             type: 'cables', title: 'Cables', icon: 'cable',
-            groups: [{val: '', label: 'Sin Agrupar'}, {val: 'Tipo_Conector', label: 'Conector'}, {val: 'Longitud_m', label: 'Longitud'}, {val: 'Propietario', label: 'Propietario'}, {val: 'Lugar_Guardado_Final', label: 'Contenedor'}, {val: 'Estado_Logistica', label: 'Estado'}]
+            groups: [{val: '', label: 'Sin Agrupar'}, {val: 'Tipo', label: 'Tipo'}, {val: 'Largo', label: 'Longitud'}, {val: 'Ubicacion', label: 'Ubicación'}, {val: 'Categoria', label: 'Categoría'}, {val: 'Propietario', label: 'Propietario'}, {val: 'Contenedor', label: 'Contenedor'}, {val: 'Estado', label: 'Estado'}]
         },
         { 
             type: 'conexiones', title: 'Conexiones', icon: 'settings_input_component',
-            groups: [{val: '', label: 'Sin Agrupar'}, {val: 'ID_Origen', label: 'Origen'}, {val: 'ID_Destino', label: 'Destino'}, {val: 'Tipo_Senial', label: 'Tipo Señal'}, {val: 'Estado_Instalacion', label: 'Estado'}]
+            groups: [{val: '', label: 'Sin Agrupar'}, {val: 'ID_Origen', label: 'Origen'}, {val: 'ID_Destino', label: 'Destino'}, {val: 'Tipo_Senial', label: 'Tipo Señal'}, {val: 'Estado', label: 'Estado'}]
         }
     ];
 
@@ -308,9 +346,9 @@ function renderInventory() {
             else sectionsOpenState[section.type] = false;
         };
 
-        const headers = (section.type === 'equipos') ? ['ID_Equipo', 'Nombre', 'Categoria', 'Ubicacion_Uso', 'Lugar_Guardado_Final', 'Estado_Logistica'] :
-                      (section.type === 'cables') ? ['ID_Cable', 'Tipo_Conector', 'Longitud_m', 'Lugar_Guardado_Final', 'Estado_Logistica'] :
-                      ['ID_Patch', 'ID_Origen', 'Puerto_Origen', 'ID_Destino', 'Puerto_Destino', 'Tipo_Senial', 'Estado_Instalacion'];
+        const headers = (section.type === 'equipos') ? ['ID_Equipo', 'Nombre', 'Categoria', 'Ubicacion', 'Contenedor', 'Estado'] :
+                      (section.type === 'cables') ? ['ID_Cable', 'Tipo', 'Largo', 'Ubicacion', 'Categoria', 'Contenedor', 'Estado'] :
+                      ['ID_Patch', 'ID_Origen', 'Puerto_Origen', 'ID_Destino', 'Puerto_Destino', 'Tipo_Senial', 'Estado'];
 
         const renderTableHTML = (tableData) => `
             <div class="table-responsive">
@@ -319,11 +357,11 @@ function renderInventory() {
                         <tr>${headers.map(h => {
                             let label = h;
                             if (h.startsWith('ID_')) label = 'ID';
-                            if (h === 'Ubicacion_Uso') label = 'Ubicación';
-                            if (h === 'Lugar_Guardado_Final') label = 'Contenedor';
-                            if (h === 'Estado_Logistica' || h === 'Estado_Instalacion') label = 'Estado';
-                            if (h === 'Tipo_Conector') label = 'Tipo';
-                            if (h === 'Longitud_m') label = 'Largo (m)';
+                            if (h === 'Ubicacion') label = 'Ubicación';
+                            if (h === 'Contenedor') label = 'Contenedor';
+                            if (h === 'Estado') label = 'Estado';
+                            if (h === 'Tipo') label = 'Tipo';
+                            if (h === 'Largo') label = 'Largo (m)';
                             if (h === 'Puerto_Origen' || h === 'Puerto_Destino') label = 'Puerto';
                             if (h === 'ID_Origen') label = 'Origen';
                             if (h === 'ID_Destino') label = 'Destino';
@@ -459,20 +497,21 @@ function mapToDb(body, type) {
     if (type === 'equipos') {
         mapFields([
             ['ID_Equipo', 'id'], ['Nombre', 'nombre'], ['Categoria', 'categoria'],
-            ['Ubicacion_Uso', 'ubicacion'], ['Propietario', 'propietario'],
-            ['Lugar_Guardado_Final', 'lugar'], ['Estado_Logistica', 'estado'], ['Notas', 'notes']
+            ['Ubicacion', 'ubicacion'], ['Propietario', 'propietario'],
+            ['Contenedor', 'lugar'], ['Estado', 'estado'], ['Notas', 'notas']
         ]);
     } else if (type === 'cables') {
         mapFields([
-            ['ID_Cable', 'id'], ['Tipo_Conector', 'tipo'], ['Longitud_m', 'longitud'],
-            ['Propietario', 'propietario'], ['Lugar_Guardado_Final', 'lugar'],
-            ['Estado_Logistica', 'estado'], ['Notas', 'notes']
+            ['ID_Cable', 'id'], ['Tipo', 'tipo'], ['Largo', 'longitud'],
+            ['Ubicacion', 'ubicacion'], ['Categoria', 'categoria'],
+            ['Propietario', 'propietario'], ['Contenedor', 'lugar'],
+            ['Estado', 'estado'], ['Notas', 'notas']
         ]);
     } else if (type === 'conexiones') {
         mapFields([
             ['ID_Patch', 'id_patch'], ['ID_Origen', 'id_origen'], ['Puerto_Origen', 'puerto_origen'],
             ['ID_Destino', 'id_destino'], ['Puerto_Destino', 'puerto_destino'],
-            ['Tipo_Senial', 'tipo_senial'], ['Estado_Instalacion', 'estado']
+            ['Tipo_Senial', 'tipo_senial'], ['Estado', 'estado'], ['Notas', 'notas']
         ]);
     }
     
@@ -510,7 +549,7 @@ function renderResults(specificId = null, pushState = true) {
 
     const matches = [...db.equipos, ...db.cables].filter(item => {
         const id = (item.ID_Equipo || item.ID_Cable || '').toUpperCase();
-        const nombre = (item.Nombre || item.Tipo_Conector || '').toUpperCase();
+        const nombre = (item.Nombre || item.Tipo || '').toUpperCase();
         return id.includes(rawQuery) || nombre.includes(rawQuery);
     });
 
@@ -523,8 +562,8 @@ function renderResults(specificId = null, pushState = true) {
         resultsContainer.innerHTML = `<p style="margin-bottom:1rem; font-size:0.8rem; color:var(--text-secondary)">${matches.length} coincidencias:</p>`;
         matches.forEach(item => {
             const id = item.ID_Equipo || item.ID_Cable;
-            const nombre = item.Nombre || item.Tipo_Conector || '';
-            const isCable = id.startsWith('CBL');
+            const nombre = item.Nombre || item.Tipo || '';
+            const isCable = id.startsWith('CBL') || id.startsWith('C-');
             const card = document.createElement('div');
             card.className = 'card match-card';
             card.innerHTML = `
@@ -637,7 +676,7 @@ function renderTreeNode(id, isCentral) {
 
     // Borde de puertos (Pills)
     if (inputs.length > 0) {
-        const isConn = inputs.some(c => c.Estado_Instalacion === 'Conectado');
+        const isConn = inputs.some(c => c.Estado === 'Conectado');
         const pill = document.createElement('div');
         pill.className = `port-pill input ${isConn ? 'connected' : 'pending'}`;
         pill.innerHTML = `<span class="material-icons" style="font-size:0.8rem">login</span>`;
@@ -647,7 +686,7 @@ function renderTreeNode(id, isCentral) {
     }
 
     if (outputs.length > 0) {
-        const isConn = outputs.some(c => c.Estado_Instalacion === 'Conectado');
+        const isConn = outputs.some(c => c.Estado === 'Conectado');
         const pill = document.createElement('div');
         pill.className = `port-pill output ${isConn ? 'connected' : 'disconnected'}`;
         pill.innerHTML = `<span class="material-icons" style="font-size:0.8rem">logout</span>`;
@@ -658,25 +697,25 @@ function renderTreeNode(id, isCentral) {
 
     if (isCentral) {
         const estadoOpciones = ['En Uso', 'Guardado', 'Devuelto', 'Instalado', 'Preparado para instalar', 'Preparado para guardar'];
-        const currentEstado = info?.Estado_Logistica || 'Guardado';
+        const currentEstado = info?.Estado || 'Guardado';
         
         el.innerHTML += `
             <button class="close-ficha-btn" onclick="clearSearch()" title="Cerrar"><span class="material-icons">close</span></button>
             <button class="print-btn-main" onclick="window.print()" title="Imprimir Ficha"><span class="material-icons">print</span></button>
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; padding-right:30px;">
                 <span class="material-icons" style="color:var(--accent-cyan); font-size:1.5rem;">${isCable ? 'cable' : 'speaker'}</span>
-                <h2 style="margin:0; font-size:1.2rem; line-height:1.2">${info?.Nombre || info?.Tipo_Conector || 'Sin Nombre'}</h2>
+                <h2 style="margin:0; font-size:1.2rem; line-height:1.2">${info?.Nombre || info?.Tipo || 'Sin Nombre'}</h2>
                 <span class="badge-id" style="font-size:0.75rem; padding:0.3rem 0.6rem;">${id}</span>
             </div>
             
             <div class="compact-meta">
                 <div class="meta-pill" title="Propietario"><span class="material-icons" style="font-size:0.9rem">person</span> ${info?.Propietario || '-'}</div>
-                <div class="meta-pill" title="Ubicación"><span class="material-icons" style="font-size:0.9rem">location_on</span> ${info?.Ubicacion_Uso || '-'}</div>
-                <div class="meta-pill" title="Contenedor"><span class="material-icons" style="font-size:0.9rem">inventory_2</span> ${info?.Lugar_Guardado_Final || '-'}</div>
-                ${!isCable && info?.Categoria ? `<div class="meta-pill" title="Categoría"><span class="material-icons" style="font-size:0.9rem">category</span> ${info.Categoria}</div>` : ''}
+                <div class="meta-pill" title="Ubicación"><span class="material-icons" style="font-size:0.9rem">location_on</span> ${info?.Ubicacion || '-'}</div>
+                <div class="meta-pill" title="Contenedor"><span class="material-icons" style="font-size:0.9rem">inventory_2</span> ${info?.Contenedor || '-'}</div>
+                ${info?.Categoria ? `<div class="meta-pill" title="Categoría"><span class="material-icons" style="font-size:0.9rem">category</span> ${info.Categoria}</div>` : ''}
                 ${isCable ? `
-                    ${info?.Tipo_Conector ? `<div class="meta-pill" title="Tipo"><span class="material-icons" style="font-size:0.9rem">cable</span> ${info.Tipo_Conector}</div>` : ''}
-                    ${info?.Longitud_m ? `<div class="meta-pill" title="Largo"><span class="material-icons" style="font-size:0.9rem">straighten</span> ${info.Longitud_m}m</div>` : ''}
+                    ${info?.Tipo ? `<div class="meta-pill" title="Tipo"><span class="material-icons" style="font-size:0.9rem">cable</span> ${info.Tipo}</div>` : ''}
+                    ${info?.Largo ? `<div class="meta-pill" title="Largo"><span class="material-icons" style="font-size:0.9rem">straighten</span> ${info.Largo}m</div>` : ''}
                 ` : ''}
                 ${info?.Notas ? `<div class="meta-pill" title="Notas Tabla"><span class="material-icons" style="font-size:0.9rem">description</span> ${info.Notas}</div>` : ''}
             </div>
@@ -754,8 +793,8 @@ function renderTreeNode(id, isCentral) {
             <div style="display:flex; justify-content:space-between; align-items:center">
                 <div style="cursor:pointer" onclick="renderResults('${id}')">
                     <span class="badge-id">${id}</span>
-                    <div style="font-size:0.85rem; font-weight:600">${info?.Nombre || info?.Tipo_Conector || ''}</div>
-                    <div class="node-metadata" style="font-size:0.7rem">${info?.Ubicacion_Uso || ''} | ${info?.Estado_Logistica || ''}</div>
+                    <div style="font-size:0.85rem; font-weight:600">${info?.Nombre || info?.Tipo || ''}</div>
+                    <div class="node-metadata" style="font-size:0.7rem">${info?.Ubicacion || ''} | ${info?.Estado || ''}</div>
                 </div>
                 <span class="material-icons" style="color:var(--text-secondary)">${isCable ? 'cable' : 'speaker'}</span>
             </div>
@@ -766,11 +805,11 @@ function renderTreeNode(id, isCentral) {
 }
 
 function renderPortListEntry(conn, type) {
-    const isConn = conn.Estado_Instalacion === 'Conectado';
+    const isConn = conn.Estado === 'Conectado';
     const targetId = type === 'in' ? conn.ID_Origen : conn.ID_Destino;
     const port = type === 'in' ? conn.Puerto_Destino : conn.Puerto_Origen;
     const targetInfo = getItemById(targetId);
-    const targetName = targetInfo?.Nombre || targetInfo?.Tipo_Conector || targetId;
+    const targetName = targetInfo?.Nombre || targetInfo?.Tipo || targetId;
 
     return `
         <div class="port-entry ${isConn ? 'connected' : 'disconnected'}" onclick="renderResults('${targetId}')">
@@ -807,7 +846,7 @@ function renderPortSelect(nodeId, conns, direction) {
 }
 
 function renderTreeConnection(conn, direction) {
-    const isConnected = conn.Estado_Instalacion === 'Conectado';
+    const isConnected = conn.Estado === 'Conectado';
     const el = document.createElement('div');
     el.className = 'connection-jump';
     el.innerHTML = `
@@ -854,15 +893,16 @@ function showConnectionModal(idPatch) {
                     <span class="material-icons" style="font-size:0.9rem">logout</span> ${conn.ID_Destino} (${conn.Puerto_Destino})
                 </div>
                 <div class="meta-pill" title="Señal"><span class="material-icons" style="font-size:0.9rem">wifi_tethering</span> ${conn.Tipo_Senial}</div>
+                ${conn.Notas ? `<div class="meta-pill" title="Notas"><span class="material-icons" style="font-size:0.9rem">description</span> ${conn.Notas}</div>` : ''}
             </div>
 
             <div style="margin-bottom:1rem; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span class="material-icons" style="color:var(--accent-cyan); font-size:1.2rem">info</span>
-                    <span style="font-size:0.9rem; font-weight:600">${conn.Estado_Instalacion}</span>
+                    <span style="font-size:0.9rem; font-weight:600">${conn.Estado}</span>
                 </div>
                 <label class="premium-checkbox">
-                    <input type="checkbox" ${conn.Estado_Instalacion === 'Conectado' ? 'checked' : ''} 
+                    <input type="checkbox" ${conn.Estado === 'Conectado' ? 'checked' : ''} 
                            onchange="togglePatch('${idPatch}', this)">
                     <span class="checkmark"></span>
                 </label>
@@ -956,7 +996,7 @@ async function togglePatch(idPatch, checkboxEl) {
         }
     }
 
-    const newState = conn.Estado_Instalacion === 'Conectado' ? 'Desconectado' : 'Conectado';
+    const newState = conn.Estado === 'Conectado' ? 'Desconectado' : 'Conectado';
 
     try {
         await handleAction('UPDATE_PATCH', { id: idPatch, value: newState });
@@ -1018,9 +1058,9 @@ function renderAdminTable(type) {
     }
 
     const headers = {
-        equipos: ['ID_Equipo', 'Nombre', 'Categoria', 'Ubicacion_Uso', 'Estado_Logistica'],
-        cables: ['ID_Cable', 'Tipo_Conector', 'Longitud_m', 'Estado_Logistica'],
-        conexiones: ['ID_Patch', 'ID_Origen', 'Puerto_Origen', 'ID_Destino', 'Puerto_Destino', 'Estado_Instalacion']
+        equipos: ['ID_Equipo', 'Nombre', 'Categoria', 'Ubicacion', 'Estado'],
+        cables: ['ID_Cable', 'Tipo', 'Largo', 'Ubicacion', 'Categoria', 'Estado'],
+        conexiones: ['ID_Patch', 'ID_Origen', 'Puerto_Origen', 'ID_Destino', 'Puerto_Destino', 'Estado']
     };
 
     adminTableHead.innerHTML = `<tr>${headers[type].map(h => `<th onclick="sortTable('${h}')">${h}</th>`).join('')}<th>Acciones</th></tr>`;
@@ -1049,6 +1089,7 @@ function sortTable(column) {
 }
 
 function toggleAdminForm(type) {
+    updateSelects();
     let formId = 'formEquipo';
     if (type === 'cables') formId = 'formCable';
     if (type === 'conexiones') formId = 'formRuteo';
@@ -1091,6 +1132,7 @@ function closeAdminModal() {
 }
 
 function editItem(type, id) {
+    updateSelects();
     console.log('editItem triggered:', type, id);
     const item = db[type].find(i => {
         const itemId = String(i.ID_Equipo || i.ID_Cable || i.ID_Patch || '');
@@ -1117,12 +1159,12 @@ function editItem(type, id) {
         'id': type === 'equipos' ? 'ID_Equipo' : 'ID_Cable',
         'nombre': 'Nombre',
         'categoria': 'Categoria',
-        'ubicacion': 'Ubicacion_Uso',
+        'ubicacion': 'Ubicacion',
         'propietario': 'Propietario',
-        'lugar': 'Lugar_Guardado_Final',
+        'lugar': 'Contenedor',
         'notas': 'Notas',
-        'tipo': 'Tipo_Conector',
-        'longitud': 'Longitud_m',
+        'tipo': 'Tipo',
+        'longitud': 'Largo',
         'id_patch': 'ID_Patch',
         'id_origen': 'ID_Origen',
         'puerto_origen': 'Puerto_Origen',
@@ -1208,10 +1250,10 @@ async function handleAction(action, body) {
         }
     } else if (action === 'UPDATE_LOGISTICA') {
         const item = getItemById(body.id);
-        if (item) item.Estado_Logistica = body.value;
+        if (item) item.Estado = body.value;
     } else if (action === 'UPDATE_PATCH') {
         const conn = db.conexiones.find(c => String(c.ID_Patch) === String(body.id));
-        if (conn) conn.Estado_Instalacion = body.value;
+        if (conn) conn.Estado = body.value;
     } else if (action === 'UPDATE_METADATOS') {
         const item = getItemById(body.id) || db.conexiones.find(c => String(c.ID_Patch) === String(body.id));
         if (item) item.Metadatos = body.value;
@@ -1261,7 +1303,7 @@ async function handleUpdateLogistica(id, newState, selectEl) {
     if (!item) return;
 
     if (selectEl) selectEl.disabled = true;
-    const oldState = item.Estado_Logistica || 'Desconocido';
+    const oldState = item.Estado || 'Desconocido';
 
     try {
         await handleAction('UPDATE_LOGISTICA', { id: id, value: newState });
@@ -1305,7 +1347,7 @@ function updateSelects() {
     
     const options = [...db.equipos, ...db.cables].map(item => {
         const id = item.ID_Equipo || item.ID_Cable;
-        const nombre = item.Nombre || item.Tipo_Conector || '';
+        const nombre = item.Nombre || item.Tipo || '';
         const displayName = nombre ? `${id} (${nombre})` : id;
         return `<option value="${id}">${displayName}</option>`;
     }).join('');
@@ -1317,11 +1359,11 @@ function updateSelects() {
 
 function populateDatalists() {
     const lists = {
-        'list_categorias': new Set(db.equipos.map(e => e.Categoria)),
-        'list_ubicaciones': new Set(db.equipos.map(e => e.Ubicacion_Uso)),
+        'list_categorias': new Set([...db.equipos, ...db.cables].map(i => i.Categoria)),
+        'list_ubicaciones': new Set([...db.equipos, ...db.cables].map(i => i.Ubicacion)),
         'list_propietarios': new Set([...db.equipos, ...db.cables].map(i => i.Propietario)),
-        'list_lugares': new Set([...db.equipos, ...db.cables].map(i => i.Lugar_Guardado_Final)),
-        'list_conectores': new Set(db.cables.map(c => c.Tipo_Conector))
+        'list_lugares': new Set([...db.equipos, ...db.cables].map(i => i.Contenedor)),
+        'list_conectores': new Set(db.cables.map(c => c.Tipo))
     };
 
     for (const [id, values] of Object.entries(lists)) {
@@ -1624,8 +1666,8 @@ function generateEquipoLabel(item) {
                 <div class="title-bold">${item.Nombre || 'S/N'}</div>
                 ${notesHtml}
                 <div class="data-line"><span class="material-icons">category</span> ${item.Categoria || '-'}</div>
-                <div class="data-line"><span class="material-icons">location_on</span> ${item.Ubicacion_Uso || '-'}</div>
-                <div class="data-line"><span class="material-icons">inventory_2</span> ${item.Lugar_Guardado_Final || '-'}</div>
+                <div class="data-line"><span class="material-icons">location_on</span> ${item.Ubicacion || '-'}</div>
+                <div class="data-line"><span class="material-icons">inventory_2</span> ${item.Contenedor || '-'}</div>
                 <div class="data-line"><span class="material-icons">person</span> ${item.Propietario || '-'}</div>
             </div>
         </div>
@@ -1639,9 +1681,11 @@ function generateCableLabel(item) {
             <div class="id-bold">${item.ID_Cable}</div>
             ${notesHtml}
             <div class="grid-data">
-                <div class="data-line"><span class="material-icons">cable</span> ${item.Tipo_Conector || '-'}</div>
-                <div class="data-line"><span class="material-icons">straighten</span> ${item.Longitud_m || '-'}m</div>
-                <div class="data-line"><span class="material-icons">inventory_2</span> ${item.Lugar_Guardado_Final || '-'}</div>
+                <div class="data-line"><span class="material-icons">cable</span> ${item.Tipo || '-'}</div>
+                <div class="data-line"><span class="material-icons">straighten</span> ${item.Largo || '-'}m</div>
+                <div class="data-line"><span class="material-icons">category</span> ${item.Categoria || '-'}</div>
+                <div class="data-line"><span class="material-icons">location_on</span> ${item.Ubicacion || '-'}</div>
+                <div class="data-line"><span class="material-icons">inventory_2</span> ${item.Contenedor || '-'}</div>
                 <div class="data-line"><span class="material-icons">person</span> ${item.Propietario || '-'}</div>
             </div>
         </div>

@@ -13,7 +13,8 @@ function doGet(e) {
     const data = {
       equipos: getSheetDataJSON("1_Equipos"),
       cables: getSheetDataJSON("2_Cables"),
-      conexiones: getSheetDataJSON("3_Conexiones")
+      conexiones: getSheetDataJSON("3_Conexiones"),
+      configuracion: getSheetDataJSON("4_Configuracion")
     };
 
     return createJsonResponse(data);
@@ -32,7 +33,7 @@ function doPost(e) {
     let result = { status: "error", message: "Acción no reconocida" };
 
     if (action === "UPDATE_PATCH") {
-      const updated = updateRowValue("3_Conexiones", "ID_Patch", body.id, "Estado_Instalacion", body.value);
+      const updated = updateRowValue("3_Conexiones", "ID_Patch", body.id, "Estado", body.value);
       result = updated ? { status: "success", message: "Patch actualizado" } : { status: "error", message: "ID_Patch no encontrado" };
     } 
     else if (action === "UPDATE_METADATOS") {
@@ -45,8 +46,8 @@ function doPost(e) {
       const sheet = SS.getSheetByName("1_Equipos");
       if (sheet) {
         sheet.appendRow([
-          body.id, body.nombre, body.categoria, body.ubicacion, 
-          body.propietario, body.lugar, body.estado, body.notas, body.metadatos || "{}"
+          body.id, body.nombre, body.ubicacion, body.categoria, 
+          body.propietario, body.contenedor, body.estado, body.notas, body.metadatos || "{}"
         ]);
         result = { status: "success", message: "Equipo agregado" };
       }
@@ -55,8 +56,8 @@ function doPost(e) {
       const sheet = SS.getSheetByName("2_Cables");
       if (sheet) {
         sheet.appendRow([
-          body.id, body.tipo, body.longitud, body.propietario, 
-          body.lugar, body.estado, body.notas, body.metadatos || "{}"
+          body.id, body.tipo, body.largo, body.ubicacion, body.categoria, 
+          body.propietario, body.contenedor, body.estado, body.notas, body.metadatos || "{}"
         ]);
         result = { status: "success", message: "Cable agregado" };
       }
@@ -66,30 +67,30 @@ function doPost(e) {
       if (sheet) {
         sheet.appendRow([
           body.id_patch, body.id_origen, body.puerto_origen, 
-          body.id_destino, body.puerto_destino, body.tipo_senial, body.estado, body.metadatos || "{}"
+          body.id_destino, body.puerto_destino, body.tipo_senial, body.estado, body.notas, body.metadatos || "{}"
         ]);
         result = { status: "success", message: "Conexión agregada" };
       }
     }
     else if (action === "UPDATE_LOGISTICA") {
-      let updated = updateRowValue("1_Equipos", "ID_Equipo", body.id, "Estado_Logistica", body.value);
+      let updated = updateRowValue("1_Equipos", "ID_Equipo", body.id, "Estado", body.value);
       if (!updated) {
-        updated = updateRowValue("2_Cables", "ID_Cable", body.id, "Estado_Logistica", body.value);
+        updated = updateRowValue("2_Cables", "ID_Cable", body.id, "Estado", body.value);
       }
-      result = updated ? { status: "success", message: "Logística actualizada" } : { status: "error", message: "ID no encontrado en Equipos ni Cables" };
+      result = updated ? { status: "success", message: "Estado actualizado" } : { status: "error", message: "ID no encontrado en Equipos ni Cables" };
     }
     else if (action === "EDIT_EQUIPO") {
       const rowData = [
-        body.id, body.nombre, body.categoria, body.ubicacion, 
-        body.propietario, body.lugar, body.estado, body.notas, body.metadatos || "{}"
+        body.id, body.nombre, body.ubicacion, body.categoria, 
+        body.propietario, body.contenedor, body.estado, body.notas, body.metadatos || "{}"
       ];
       const success = findAndReplaceRow("1_Equipos", "ID_Equipo", body.id, rowData);
       result = success ? { status: "success", message: "Equipo editado" } : { status: "error", message: "ID no encontrado" };
     }
     else if (action === "EDIT_CABLE") {
       const rowData = [
-        body.id, body.tipo, body.longitud, body.propietario, 
-        body.lugar, body.estado, body.notas, body.metadatos || "{}"
+        body.id, body.tipo, body.largo, body.ubicacion, body.categoria, 
+        body.propietario, body.contenedor, body.estado, body.notas, body.metadatos || "{}"
       ];
       const success = findAndReplaceRow("2_Cables", "ID_Cable", body.id, rowData);
       result = success ? { status: "success", message: "Cable editado" } : { status: "error", message: "ID no encontrado" };
@@ -97,7 +98,7 @@ function doPost(e) {
     else if (action === "EDIT_CONEXION") {
       const rowData = [
         body.id_patch, body.id_origen, body.puerto_origen, 
-        body.id_destino, body.puerto_destino, body.tipo_senial, body.estado, body.metadatos || "{}"
+        body.id_destino, body.puerto_destino, body.tipo_senial, body.estado, body.notas, body.metadatos || "{}"
       ];
       const success = findAndReplaceRow("3_Conexiones", "ID_Patch", body.id_patch, rowData);
       result = success ? { status: "success", message: "Conexión editada" } : { status: "error", message: "ID no encontrado" };

@@ -543,3 +543,58 @@ El error está así:
 - [ ] En la zona B del cable, el QR está alineado al extremo derecho
 - [ ] El ícono de contenedor es `inventory_2` en ambos tipos de etiqueta
 - [ ] Versiones de cache-busting actualizadas
+
+---
+
+### PROMPT 16: Migración Estructural de Base de Datos y Tabla de Configuración
+
+**Contexto:** Se rediseñó la estructura de las hojas de cálculo para unificar la nomenclatura de campos, agregar campos faltantes y sacar valores *hardcodeados* del código hacia una nueva tabla de configuración. Se asume que el usuario ya modificó los encabezados manualmente en Google Sheets.
+
+**Instrucciones para el Agente:**
+
+> **REGLA CRÍTICA:** Revisá exhaustivamente todo el frontend (`app.js`, `index.html`) y backend (`Code.gs`) para reemplazar las viejas claves de objeto por las nuevas. Incrementá cache-busting.
+
+**TAREA 1: Adaptación de Claves (Frontend)**
+- Las propiedades devueltas por Google Sheets cambiarán sus nombres. Reemplazar TODAS las referencias en el código:
+  - `Ubicacion_Uso` ➔ `Ubicacion`
+  - `Lugar_Guardado_Final` ➔ `Contenedor`
+  - `Estado_Logistica` y `Estado_Instalacion` ➔ `Estado`
+  - `Tipo_Conector` ➔ `Tipo`
+  - `Longitud_m` ➔ `Largo`
+- Actualizar los listados de filtros/agrupación en `app.js` (`groups`) para usar estos nuevos nombres en lugar de los viejos.
+- Actualizar los mapeos de la función de búsqueda de búsqueda universal para incluir estas claves nuevas.
+- Actualizar el renderizado de tablas en el modo de Administración para usar las nuevas claves de los objetos.
+
+**TAREA 2: Modificación de Formularios y Fichas (Frontend)**
+- **Equipos:** Renderizar ficha y formulario con los nuevos nombres de variable.
+- **Cables:**
+  - Agregar inputs para `Ubicacion` y `Categoria` en el formulario (`[name="ubicacion"]` y `[name="categoria"]`).
+  - Agregar visualización de `Ubicacion` y `Categoria` en las tarjetas (fichas) que se abren, manteniendo el mismo formato e iconos que en equipos.
+- **Conexiones:**
+  - Agregar un `<textarea name="notas">` en el modal de edición de conexiones.
+  - IMPORTANTE: Las `Notas` de una conexión deben mostrarse SOLO dentro de su modal de edición/vista detallada, NO en la vista general de la lista del árbol.
+- Actualizar las funciones generadoras de etiquetas (`generateEquipoLabel`, `generateCableLabel`) para usar los nuevos nombres de variable. En el caso del cable, sumar la información nueva (Categoria y Ubicación).
+
+**TAREA 3: Integrar Tabla de Configuración (Frontend)**
+- La nueva tabla proveerá datos en `db.configuracion`, que tendrán un `ID_Configuracion`, `Valor` y `Metadatos` (JSON).
+- Buscar el elemento del menú/título (donde dice "Audio y Video ER2") y reemplazarlo dinámicamente con el `Valor` del registro donde `ID_Configuracion === "titulo"`.
+- En el menú lateral (sidebar), las entradas de referencia (ej. "Manuales", "Diagramas") deben generarse dinámicamente iterando sobre el objeto parseado de `Metadatos` del registro donde `ID_Configuracion === "referencias"`.
+
+**TAREA 4: Refactorización Backend (`Code.gs`)**
+- En `doGet()`, agregar la lectura de la hoja `"4_Configuracion"` y devolverla dentro del objeto JSON como `configuracion: readSheet("4_Configuracion")`.
+- En `UPDATE_LOGISTICA`, cambiar la columna objetivo `"Estado_Logistica"` por `"Estado"`.
+- En todas las funciones `ADD_` y `EDIT_`, el array de inserción de fila debe coincidir ESTRICTAMENTE con este nuevo orden de columnas en las hojas de Google Sheets:
+  - **Equipos:** `[body.id, body.nombre, body.ubicacion, body.categoria, body.propietario, body.contenedor, body.estado, body.notas, body.metadatos || "{}"]`
+  - **Cables:** `[body.id, body.tipo, body.largo, body.ubicacion, body.categoria, body.propietario, body.contenedor, body.estado, body.notas, body.metadatos || "{}"]`
+  - **Conexiones:** `[body.id_patch, body.id_origen, body.puerto_origen, body.id_destino, body.puerto_destino, body.tipo_senial, body.estado, body.notas, body.metadatos || "{}"]`
+
+**TAREA 5: Cache-busting**
+- Incrementá las versiones `?v=` de CSS y JS en `index.html`.
+
+**Verificación final:**
+- [ ] Backend: `Code.gs` envía `configuracion` e inserta los datos en el nuevo orden de columnas estricto.
+- [ ] Frontend: `Ubicacion_Uso`, `Lugar_Guardado_Final`, `Estado_Logistica`, `Tipo_Conector`, `Longitud_m` fueron eliminados de `app.js` y reemplazados por sus versiones acortadas.
+- [ ] Frontend: El título principal de la app se extrae de `db.configuracion`.
+- [ ] Frontend: Los enlaces del menú se generan iterando los metadatos de configuración.
+- [ ] Frontend: Modal de conexión soporta `Notas` pero el árbol NO las renderiza.
+- [ ] Frontend: Fichas y etiquetas QR reflejan los nuevos nombres de propiedades.
