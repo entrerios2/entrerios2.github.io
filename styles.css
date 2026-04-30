@@ -639,12 +639,19 @@ tr:hover td {
 .tree-node {
   width: 100%;
   max-width: 400px;
+  margin: 0 auto;
   padding: 1.5rem 1rem; /* More vertical padding for pills */
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   position: relative;
   transition: all 0.3s;
+}
+
+@media (min-width: 768px) {
+  .tree-node {
+    max-width: 800px;
+  }
 }
 
 .tree-node.central {
@@ -887,8 +894,20 @@ tr:hover td {
   color: #fff;
 }
 .tree-node.central {
-  padding-top: 2rem;
-  padding-right: 2rem;
+  box-shadow: 0 0 20px rgba(0, 242, 255, 0.1);
+}
+
+.ficha-print {
+  position: absolute !important;
+  top: 10px;
+  right: 50px;
+  opacity: 0.7 !important;
+  pointer-events: auto !important;
+  transform: none !important;
+}
+
+.ficha-print:hover {
+  opacity: 1 !important;
 }
 
 /* Premium Select */

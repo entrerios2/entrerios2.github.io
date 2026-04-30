@@ -211,7 +211,13 @@ async function logActivity(itemId, type, detail) {
 
     let meta = { historial: [], notas: [] };
     try {
-        if (item.Metadatos) meta = JSON.parse(item.Metadatos);
+        if (item.Metadatos) {
+            const parsed = JSON.parse(item.Metadatos);
+            meta = {
+                historial: Array.isArray(parsed.historial) ? parsed.historial : [],
+                notas: Array.isArray(parsed.notas) ? parsed.notas : []
+            };
+        }
     } catch(e) { console.error("Error parsing Metadatos", e); }
 
     const entry = {
@@ -707,7 +713,7 @@ function renderTreeNode(id, isCentral, fixedInputConn = null, fixedOutputConn = 
     if (outputs.length > 0) {
         const isConn = outputs.some(c => c.Estado === 'Conectado');
         const pill = document.createElement('div');
-        pill.className = `port-pill output ${isConn ? 'connected' : 'disconnected'}`;
+        pill.className = `port-pill output ${isConn ? 'connected' : 'pending'}`;
         pill.innerHTML = `<span class="material-icons" style="font-size:0.8rem">logout</span>`;
         
         if (fixedOutputConn) {
@@ -726,8 +732,7 @@ function renderTreeNode(id, isCentral, fixedInputConn = null, fixedOutputConn = 
         
         el.insertAdjacentHTML('beforeend', `
             <button class="close-ficha-btn" onclick="clearSearch()" title="Cerrar"><span class="material-icons">close</span></button>
-            <button class="print-btn-main" onclick="window.print()" title="Imprimir Ficha"><span class="material-icons">print</span></button>
-            <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; padding-right:30px;">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; padding-right:40px;">
                 <span class="material-icons" style="color:var(--accent-cyan); font-size:1.5rem;">${isCable ? 'cable' : 'speaker'}</span>
                 <h2 style="margin:0; font-size:1.2rem; line-height:1.2">${info?.Nombre || info?.Tipo || 'Sin Nombre'}</h2>
                 <span class="badge-id" style="font-size:0.75rem; padding:0.3rem 0.6rem;">${id}</span>
