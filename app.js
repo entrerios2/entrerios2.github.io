@@ -864,7 +864,15 @@ function showConnectionModal(idPatch) {
     if (!conn) return;
 
     let meta = { historial: [], notas: [] };
-    try { if (conn.Metadatos) meta = JSON.parse(conn.Metadatos); } catch(e){}
+    try { 
+        if (conn.Metadatos) {
+            const parsed = JSON.parse(conn.Metadatos);
+            meta = { 
+                historial: Array.isArray(parsed.historial) ? parsed.historial : [],
+                notas: Array.isArray(parsed.notas) ? parsed.notas : []
+            };
+        }
+    } catch(e){}
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -1202,9 +1210,29 @@ async function handleFormSubmit(e, formId) {
     const isEdit = body.isEdit === 'true';
 
     let action = '';
-    if (formId === 'formEquipo') action = isEdit ? 'EDIT_EQUIPO' : 'ADD_EQUIPO';
-    if (formId === 'formCable') action = isEdit ? 'EDIT_CABLE' : 'ADD_CABLE';
-    if (formId === 'formRuteo') action = isEdit ? 'EDIT_CONEXION' : 'ADD_CONEXION';
+    if (formId === 'formEquipo') {
+        action = isEdit ? 'EDIT_EQUIPO' : 'ADD_EQUIPO';
+        if (!isEdit && !body.estado) body.estado = 'Guardado';
+    }
+    if (formId === 'formCable') {
+        action = isEdit ? 'EDIT_CABLE' : 'ADD_CABLE';
+        if (!isEdit && !body.estado) body.estado = 'Guardado';
+    }
+    if (formId === 'formRuteo') {
+        action = isEdit ? 'EDIT_CONEXION' : 'ADD_CONEXION';
+        if (!isEdit) {
+            if (!body.estado) body.estado = 'Desconectado';
+            // Generación automática de ID: [Origen]/[Destino]
+            let baseId = `${body.id_origen}/${body.id_destino}`;
+            let finalId = baseId;
+            let counter = 1;
+            while (db.conexiones.some(c => c.ID_Patch === finalId)) {
+                finalId = `${baseId}${counter}`;
+                counter++;
+            }
+            body.id_patch = finalId;
+        }
+    }
 
     submitBtn.disabled = true;
     submitBtn.innerHTML = `<span class="spinner spinner-sm spinner-btn"></span> Guardando...`;

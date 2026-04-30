@@ -1,4 +1,4 @@
-const CACHE_NAME = 'av-tech-v48';
+const CACHE_NAME = 'av-tech-v50';
 const ASSETS = [
   './',
   './index.html',
@@ -17,6 +17,8 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+  
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
