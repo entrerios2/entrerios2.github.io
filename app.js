@@ -370,6 +370,11 @@ function renderInventory() {
                         ${section.groups.map(g => `<option value="${g.val}" ${activeGroupings[section.type] === g.val ? 'selected' : ''}>${g.label}</option>`).join('')}
                     </select>
                 </div>
+                ${currentMode === 'ADMIN' && section.type !== 'conexiones' ? `
+                    <button class="print-btn-main" onclick="event.stopPropagation(); preparePrintLabels('${section.type}')" title="Imprimir Etiquetas">
+                        <span class="material-icons">print</span>
+                    </button>
+                ` : ''}
             </div>
             ${currentMode === 'ADMIN' ? `
                 <button class="add-circular-btn" title="Nuevo ${section.title}" 
@@ -657,6 +662,7 @@ function renderTreeNode(id, isCentral) {
         
         el.innerHTML += `
             <button class="close-ficha-btn" onclick="clearSearch()" title="Cerrar"><span class="material-icons">close</span></button>
+            <button class="print-btn-main" onclick="window.print()" title="Imprimir Ficha"><span class="material-icons">print</span></button>
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; padding-right:30px;">
                 <span class="material-icons" style="color:var(--accent-cyan); font-size:1.5rem;">${isCable ? 'cable' : 'speaker'}</span>
                 <h2 style="margin:0; font-size:1.2rem; line-height:1.2">${info?.Nombre || info?.Tipo_Conector || 'Sin Nombre'}</h2>
@@ -1522,6 +1528,102 @@ function updateOfflineStatus() {
         document.body.classList.add('is-offline');
     }
 }
+
+// Label Generation & Printing
+async function preparePrintLabels(type) {
+    const previewModal = document.getElementById('printPreviewModal');
+    const container = document.getElementById('previewContainer');
+    container.innerHTML = '<div style="text-align:center; padding:20px;">Generando etiquetas...</div>';
+    previewModal.style.display = 'flex';
+
+    // Get visible items based on current search/filter (if any) or just all
+    const data = db[type];
+    
+    setTimeout(async () => {
+        container.innerHTML = '';
+        const printArea = document.getElementById('printArea');
+        printArea.innerHTML = '';
+
+        for (const item of data) {
+            const id = item.ID_Equipo || item.ID_Cable || item.ID_Patch;
+            let labelHtml = '';
+            if (type === 'equipos') labelHtml = generateEquipoLabel(item);
+            else if (type === 'cables') labelHtml = generateCableLabel(item);
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = 'label-container';
+            wrapper.innerHTML = labelHtml;
+            container.appendChild(wrapper);
+
+            // Print Area clone
+            const printWrapper = wrapper.cloneNode(true);
+            printArea.appendChild(printWrapper);
+
+            // Generate QR for both preview and print clones
+            const qrContainers = [
+                ...Array.from(wrapper.querySelectorAll('.qr-canvas')),
+                ...Array.from(printWrapper.querySelectorAll('.qr-canvas'))
+            ];
+            
+            qrContainers.forEach(div => {
+                new QRCode(div, {
+                    text: id,
+                    width: 128,
+                    height: 128,
+                    correctLevel: QRCode.CorrectLevel.L
+                });
+            });
+        }
+
+        document.getElementById('confirmPrintBtn').onclick = () => {
+            window.print();
+        };
+    }, 100);
+}
+
+function generateEquipoLabel(item) {
+    return `
+        <div class="label-base label-equipo">
+            <div class="qr-side">
+                <div class="qr-canvas"></div>
+                <div class="id-text">${item.ID_Equipo}</div>
+            </div>
+            <div class="data-side">
+                <div class="title-bold">${item.Nombre || 'S/N'}</div>
+                <div class="data-line"><span class="material-icons">category</span> ${item.Categoria || '-'}</div>
+                <div class="data-line"><span class="material-icons">location_on</span> ${item.Ubicacion_Uso || '-'}</div>
+                <div class="data-line"><span class="material-icons">home</span> ${item.Lugar_Guardado_Final || '-'}</div>
+                <div class="data-line"><span class="material-icons">person</span> ${item.Propietario || '-'}</div>
+            </div>
+        </div>
+    `;
+}
+
+function generateCableLabel(item) {
+    const content = `
+        <div class="qr-canvas"></div>
+        <div class="data-col">
+            <div class="id-bold">${item.ID_Cable}</div>
+            <div class="grid-data">
+                <div class="data-line"><span class="material-icons">cable</span> ${item.Tipo_Conector || '-'}</div>
+                <div class="data-line"><span class="material-icons">straighten</span> ${item.Longitud_m || '-'}m</div>
+                <div class="data-line"><span class="material-icons">home</span> ${item.Lugar_Guardado_Final || '-'}</div>
+                <div class="data-line"><span class="material-icons">person</span> ${item.Propietario || '-'}</div>
+            </div>
+        </div>
+    `;
+    return `
+        <div class="label-base label-cable">
+            <div class="zone">${content}</div>
+            <div class="pegado">┄ doblar ┄</div>
+            <div class="zone">${content}</div>
+        </div>
+    `;
+}
+
+window.addEventListener('afterprint', () => {
+    document.getElementById('printArea').innerHTML = '';
+});
 
 // Start
 init();

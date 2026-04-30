@@ -336,3 +336,210 @@ otas.
    - Incrementa las variables de cache-busting en `index.html` para el script y estilos (por ejemplo, pasá a `?v=23.0`) para forzar la actualización en GitHub Pages.
 
 **Regla de Oro:** Garantizar siempre un bloque `try...finally` o lógica en los `catch` para que los botones NUNCA se queden deshabilitados perpetuamente si ocurre un error de red.
+
+---
+
+### PROMPT 13: Impresión de Etiquetas QR para Equipos y Cables
+
+**Contexto:** La aplicación gestiona un inventario de equipos y cables AV. Se necesita poder imprimir etiquetas físicas con códigos QR para identificar cada elemento. Las etiquetas tienen dos formatos distintos: rectangular para equipos y bandera (flag) para cables. Los QR se escanean luego con el lector integrado de la app para buscar el elemento.
+
+**Objetivo:** Implementar un sistema completo de generación e impresión de etiquetas QR desde la sección de Administración.
+
+**Instrucciones para el Agente:**
+
+> **REGLA CRÍTICA:** No omitas ninguna directiva. Al finalizar, recorré cada punto de este prompt y verificá que esté implementado. Incrementá la versión de cache-busting en `index.html` para JS y CSS.
+
+**TAREA 1: Agregar librería QR**
+- Incluí en `index.html` la librería `qrcode.min.js` via CDN: `https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js`
+- El QR debe codificar **solo el texto del ID** del elemento (ej: `XR-01`), NO una URL.
+- Configurar con nivel de corrección de error **L** (Low) para minimizar la cantidad de módulos y maximizar legibilidad en tamaño muy pequeño.
+
+**TAREA 2: Formato de Etiqueta de Equipo**
+- Dimensiones fijas: **30mm × 20mm**
+- Layout horizontal: QR a la izquierda (ocupa el alto completo), datos a la derecha.
+- Tipografía: Usar una **fuente narrow/condensed** (ej: `Inter Tight`, `Roboto Condensed`, o similar de Google Fonts) para maximizar el texto que entre en el espacio reducido.
+- Datos a mostrar (usar **Material Icons** idénticos a los de la app, NO emojis):
+  - **Nombre/Modelo** — texto destacado, bold, mayor tamaño que el resto
+  - `category` → Categoría
+  - `location_on` → Ubicación de Uso
+  - `home` → Contenedor
+  - `person` → Propietario
+- El ID se muestra debajo del QR en texto legible.
+- Esquema visual:
+```
+┌────────────────────────────┐
+│ ┌─────┐  NOMBRE DESTACADO  │
+│ │ QR  │  category Cat.     │
+│ │     │  location_on Ubic. │
+│ └─────┘  home Cont.        │
+│  ID-EQ   person Prop.      │
+└────────────────────────────┘
+```
+
+**TAREA 3: Formato de Etiqueta de Cable (Bandera/Flag)**
+- Dimensiones fijas totales: **120mm × 12mm** (esto se compone de 3 zonas)
+- La etiqueta se dobla y pega consigo misma alrededor del cable formando una bandera legible desde ambos lados.
+- **Estructura de la tira:**
+  - **Zona visible A** (40mm): Datos del cable + QR miniatura
+  - **Zona de pegado** (20mm central): Se envuelve alrededor del cable. Marcar con **líneas punteadas** en ambos bordes indicando "doblar aquí". Esta zona puede estar en blanco o con el ID repetido.
+  - **Zona visible B** (40mm): **Datos idénticos** a la Zona A (repetidos, NO espejados — al doblar quedan legibles desde ambas caras de la bandera)
+- Datos a mostrar en cada zona visible (Material Icons):
+  - QR miniatura del ID
+  - ID del cable en bold
+  - `cable` → Tipo de Conector
+  - `straighten` → Longitud
+  - `home` → Contenedor
+  - `person` → Propietario
+- Misma fuente narrow/condensed que la etiqueta de equipo.
+- Esquema visual:
+```
+┌──── visible A (40mm) ─────┬── pegado (20mm) ──┬──── visible B (40mm) ─────┐
+│ ┌──┐                      │                   │ ┌──┐                      │
+│ │QR│ ID cable T. 📏 Long  │  ┄┄ doblar ┄┄    │ │QR│ ID cable T. 📏 Long  │
+│ └──┘    home C.  👤 Prop  │                   │ └──┘    home C.  👤 Prop  │
+└───────────────────────────┴───────────────────┴───────────────────────────┘
+```
+
+**TAREA 4: CSS de Impresión**
+- Todas las dimensiones de etiquetas deben estar en **`mm`** (unidades absolutas CSS) para que se impriman siempre al mismo tamaño sin importar el papel.
+- Definir `@media print` que:
+  - Oculte **toda** la UI de la app (navbar, sidebar, modales, contenido) excepto `#printArea`
+  - Aplique las dimensiones fijas a cada tipo de etiqueta
+  - Use `@page { margin: 5mm; }`
+  - Todo en **blanco y negro** (sin colores de la paleta de la app)
+  - Material Icons deben renderizarse correctamente en impresión (verificar que la fuente se cargue)
+- Para impresión por lote: disponer las etiquetas en grilla (varias por fila) para aprovechar el papel.
+
+**TAREA 5: Funciones JavaScript**
+- `generateEquipoLabel(id)` → Genera el HTML de una etiqueta de equipo a partir de su ID en `db.equipos`
+- `generateCableLabel(id)` → Genera el HTML de una etiqueta de cable a partir de su ID en `db.cables`
+- `printLabels(type)` → Recibe `'equipos'` o `'cables'`, genera las etiquetas de todos los elementos visibles (respetando filtros/agrupación activos), las inyecta en `#printArea`, y llama a `window.print()`. Limpia `#printArea` después del evento `afterprint`.
+- Crear un `<div id="printArea" style="display:none"></div>` en `index.html` para el área de impresión.
+
+**TAREA 6: UI — Botón en Administración**
+- En la sección de **Administración**, dentro del header de las secciones colapsables de **Equipos** y **Cables** (junto al botón/cápsula de agrupar), agregar un botón con el ícono `print` de Material Icons.
+- Al hacer clic, debe mostrar un **modal de vista previa** antes de imprimir:
+  - Muestra las etiquetas generadas a escala visual (pueden ser escaladas para preview pero se imprimen a tamaño real)
+  - Nota visible: "Asegurate de imprimir a escala 100%"
+  - Botón "Imprimir" que ejecuta la impresión
+  - Botón "Cerrar" para cancelar
+- NO agregar el botón de impresión en la sección de Operación, solo en Administración.
+
+**TAREA 7: Cache-busting**
+- Incrementá las versiones `?v=` de CSS y JS en `index.html`.
+
+**Verificación final:** Antes de terminar, repasá cada tarea (1-7) y confirmá que está implementada. Verificá que:
+- [ ] La librería QR está incluida via CDN
+- [ ] Las etiquetas de equipo miden 30×20mm en impresión
+- [ ] Las etiquetas de cable miden 120×12mm con 3 zonas (40+20+40)
+- [ ] Los QR codifican solo el texto del ID
+- [ ] Se usa fuente narrow/condensed
+- [ ] Se usan Material Icons, no emojis
+- [ ] El botón de imprimir aparece solo en Administración
+- [ ] Hay modal de vista previa antes de imprimir
+- [ ] `@media print` oculta toda la UI excepto las etiquetas
+- [ ] Versiones de cache-busting actualizadas
+
+---
+
+### PROMPT 14: Corrección Crítica de Impresión de Etiquetas (CSS Roto)
+
+**Contexto:** La impresión de etiquetas no funciona. Al imprimir, la salida muestra una captura de la página completa (con scrollbar, navbar, y toda la UI visible) en vez de solo las etiquetas. Las etiquetas no se muestran con el formato correcto.
+
+**Causa raíz diagnosticada:** Hay un **error de sintaxis CSS** en `styles.css`. En la línea que contiene `.premium-select-wrapper .premium-select {`, la llave de cierre `}` de esa regla **nunca se escribió**. Todo el bloque de CSS de impresión (`@media print`, `.label-equipo`, `.label-cable`, `#printArea`, etc.) quedó **anidado dentro** de esa regla, lo cual invalida completamente todas las reglas de impresión.
+
+El error está así:
+```css
+.premium-select-wrapper .premium-select {
+  padding: 8px 30px 8px 12px;
+  width: 100%;/* Print & Label Styles */   ← ¡FALTA } antes de este comentario!
+#printArea { display: none; }
+@media print { ... }
+.label-base { ... }
+...
+}  ← Esta llave cierra .premium-select-wrapper, NO el bloque de preview
+```
+
+**Instrucciones para el Agente:**
+
+> **REGLA CRÍTICA:** Este prompt corrige un bug de sintaxis. NO cambies la lógica JavaScript ni el HTML. Solo corregí el CSS. No omitas ningún paso. Incrementá cache-busting.
+
+**TAREA 1: Corregir la sintaxis CSS**
+- En `styles.css`, buscá la regla `.premium-select-wrapper .premium-select {`. 
+- Inmediatamente después de `width: 100%;`, cerrá la regla con `}`.
+- Asegurate de que el comentario `/* Print & Label Styles */` y todo lo que sigue (`#printArea`, `@media print`, `.label-base`, `.label-equipo`, `.label-cable`, `#previewContainer`) queden como **reglas CSS de nivel raíz**, NO anidadas dentro de ningún otro selector.
+- Verificá que la `}` que estaba en la línea del `#previewContainer .label-container` (que era la que cerraba erróneamente `.premium-select-wrapper`) se elimine o se reubique correctamente.
+
+**TAREA 2: Verificar la estructura `@media print`**
+- La regla `@media print` debe:
+  - Ocultar `body > *:not(#printArea)` con `display: none !important`
+  - Mostrar `#printArea` con `display: flex !important`
+  - Aplicar `@page { margin: 5mm; }`
+  - Quitar scrollbars: `html, body { overflow: hidden !important; }`
+  - Fondo blanco: `html, body { background: #fff !important; }`
+- Estas reglas deben estar a **nivel raíz del CSS**, NO dentro de ningún otro selector.
+
+**TAREA 3: Verificar dimensiones de etiquetas**
+- `.label-equipo` debe tener `width: 30mm; height: 20mm;` a nivel raíz
+- `.label-cable` debe tener `width: 120mm; height: 12mm;` a nivel raíz
+- Verificar que `.label-base`, `.label-equipo .qr-side`, `.label-cable .zone`, `.label-cable .pegado` y todas las sub-reglas estén a nivel raíz
+
+**TAREA 4: Verificar que el QR se renderice dentro de las etiquetas**
+- Los elementos `.qr-canvas` dentro de las etiquetas deben tener `overflow: hidden` y dimensiones que restrinjan el canvas generado por `qrcode.js` al tamaño de la etiqueta
+- El canvas/imagen generado por `QRCode()` debe escalarse con CSS: `.qr-canvas img, .qr-canvas canvas { width: 100% !important; height: 100% !important; }`
+
+**TAREA 5: Cache-busting**
+- Incrementá las versiones `?v=` de CSS y JS en `index.html`.
+
+**Verificación final:** Abrí las DevTools del navegador, pestaña Console, y verificá que no haya errores de parseo CSS. Luego hacé clic en "Imprimir" desde la vista previa y verificá en la ventana de impresión del navegador que:
+- [ ] Solo se ven las etiquetas, no la UI de la app
+- [ ] No se ve scrollbar
+- [ ] Las etiquetas tienen borde y dimensiones correctas
+- [ ] Los QR se ven dentro de las etiquetas
+- [ ] Los Material Icons se muestran, no texto de fallback
+
+---
+
+### PROMPT 15: Ajustes de Formato en Etiquetas Impresas
+
+**Contexto:** Las etiquetas se imprimen pero necesitan ajustes de formato para ser funcionales en producción. Este prompt corrige el espaciado, bordes, dimensiones de las etiquetas de cable y un ícono incorrecto.
+
+**Instrucciones para el Agente:**
+
+> **REGLA CRÍTICA:** Aplicá TODOS los cambios listados. Al finalizar, recorré cada tarea y verificá que esté implementada. Incrementá cache-busting en `index.html`.
+
+**TAREA 1: Eliminar espacio entre etiquetas**
+- En `styles.css`, las etiquetas deben imprimirse **sin espacio** entre ellas (gap: 0, margin: 0 en `.label-container` y en `#printArea`). De esta forma, al imprimir una hoja completa, el usuario puede recortarlas de una sola vez con una guillotina o tijera sin desperdiciar papel.
+- Tanto en `@media print` como en la vista normal, los `.label-container` deben tener `margin: 0` y el `#printArea` debe tener `gap: 0`.
+
+**TAREA 2: Borde exterior punteado**
+- El borde de `.label-base` debe ser **punteado** (`border: 0.2mm dashed #000`), no sólido. Esto sirve como guía de corte visual.
+- Aplicar tanto en pantalla como en `@media print`.
+
+**TAREA 3: Corregir dimensiones de etiqueta de cable**
+- La estructura actual es incorrecta. La etiqueta de cable debe tener **3 zonas con dimensiones simétricas**:
+  - **Zona A** (izquierda visible): **40mm** — datos + QR alineado a la izquierda
+  - **Zona de pegado** (centro): **20mm** — se envuelve alrededor del cable, con líneas punteadas a ambos lados
+  - **Zona B** (derecha visible): **40mm** (= 40mm de datos) — los mismos datos repetidos, pero con el QR alineado **a la derecha** (al extremo derecho de la zona)
+- **Total: 40 + 20 + 40 = 100mm** (el ancho total no cambia)
+- La razón de la asimetría: cuando se dobla la bandera, la Zona B tiene 20mm extra que se superponen sobre la zona de pegado para adherirse. Al doblar, ambas zonas visibles quedan del mismo largo (40mm) y la bandera es simétrica visualmente.
+- En el CSS:
+  - `.label-cable .zone:first-child` → `width: 40mm` (QR a la izquierda, datos a la derecha del QR)
+  - `.label-cable .pegado` → `width: 20mm`
+  - `.label-cable .zone:last-child` → `width: 40mm` (datos a la izquierda, QR fijado a la derecha con `margin-left: auto` o `justify-content: flex-end`)
+- En el HTML generado por `generateCableLabel()` en `app.js`, la Zona B debe tener el layout invertido: datos primero, QR al final (derecha).
+
+**TAREA 4: Corregir ícono de contenedor**
+- En `app.js`, en las funciones `generateEquipoLabel()` y `generateCableLabel()`, el ícono del campo Contenedor/Lugar de Guardado debe ser `inventory_2`, NO `home`.
+- Buscar todas las ocurrencias de `<span class="material-icons">home</span>` dentro de estas dos funciones y reemplazarlas por `<span class="material-icons">inventory_2</span>`.
+
+**TAREA 5: Cache-busting**
+- Incrementá las versiones `?v=` de CSS y JS en `index.html`.
+
+**Verificación final:**
+- [ ] Las etiquetas se imprimen sin espacio entre ellas (borde contra borde)
+- [ ] Los bordes son punteados (dashed), no sólidos
+- [ ] La etiqueta de cable mide 100mm total: zona A (40mm) + pegado (20mm) + zona B (40mm)
+- [ ] En la zona B del cable, el QR está alineado al extremo derecho
+- [ ] El ícono de contenedor es `inventory_2` en ambos tipos de etiqueta
+- [ ] Versiones de cache-busting actualizadas

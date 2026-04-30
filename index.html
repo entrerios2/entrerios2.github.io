@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Audio y Video Circuito ER2</title>
-    <link rel="stylesheet" href="styles.css?v=37.0">
+    <link rel="stylesheet" href="styles.css?v=42.0">
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,6 +13,8 @@
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <!-- QR Library -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://unpkg.com/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar">
@@ -157,9 +159,32 @@
         </div>
     </div>
 
+    <!-- Print Preview Modal -->
+    <div id="printPreviewModal" class="modal-overlay" style="display:none; z-index: 4000;">
+        <div class="modal-content glass" style="max-width: 90vw; width: auto; max-height: 90vh; overflow-y: auto;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+                <h3 style="margin:0; color:var(--accent-cyan);">Vista Previa de Etiquetas</h3>
+                <button onclick="document.getElementById('printPreviewModal').style.display='none'" class="close-btn" style="position:static;"><span class="material-icons">close</span></button>
+            </div>
+            <div id="previewContainer" style="background:#fff; padding: 20px; border-radius: 8px; color: #000; overflow-x: auto;">
+                <!-- Labels will be rendered here for preview -->
+            </div>
+            <p style="margin-top:1rem; font-size:0.8rem; color:var(--text-secondary); text-align:center;">
+                <span class="material-icons" style="font-size:1rem; vertical-align:middle;">info</span> Asegurate de imprimir a escala 100%
+            </p>
+            <div style="display:flex; gap:10px; margin-top:1rem;">
+                <button id="confirmPrintBtn" class="action-btn btn-primary" style="flex:1">Imprimir Ahora</button>
+                <button onclick="document.getElementById('printPreviewModal').style.display='none'" class="action-btn" style="flex:1; background:rgba(255,255,255,0.1)">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Area (Hidden for Screen) -->
+    <div id="printArea" style="display:none"></div>
+
     <!-- Floating Mode Toggle REMOVED -->
 
-    <script src="app.js?v=37.0"></script>
+    <script src="app.js?v=42.0"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
