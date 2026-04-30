@@ -1069,11 +1069,16 @@ function toggleAdminForm(type) {
     // Attach Auto-ID listeners to the CLONED form elements
     if (type === 'equipos') {
         const catIn = form.querySelector('[name="categoria"]');
+        const ubiIn = form.querySelector('[name="ubicacion"]');
         const nomIn = form.querySelector('[name="nombre"]');
-        [catIn, nomIn].forEach(el => el?.addEventListener('input', () => autoGenerateId('equipo', form)));
+        [catIn, ubiIn, nomIn].forEach(el => el?.addEventListener('input', () => autoGenerateId('equipo', form)));
     } else if (type === 'cables') {
         const tipIn = form.querySelector('[name="tipo"]');
         tipIn?.addEventListener('input', () => autoGenerateId('cable', form));
+    } else if (type === 'conexiones') {
+        const oriIn = form.querySelector('[name="id_origen"]');
+        const desIn = form.querySelector('[name="id_destino"]');
+        [oriIn, desIn].forEach(el => el?.addEventListener('change', () => autoGenerateId('conexion', form)));
     }
 
     // Re-attach listener
@@ -1330,27 +1335,53 @@ function autoGenerateId(formType, formEl) {
     if (!formEl) return;
     let prefix = '';
     if (formType === 'equipo') {
-        const cat = formEl.querySelector('[name="categoria"]')?.value.substring(0, 3).toUpperCase();
-        const nom = formEl.querySelector('[name="nombre"]')?.value.substring(0, 3).toUpperCase();
-        if (cat && nom) prefix = `${cat}-${nom}`;
-    } else {
-        const tip = formEl.querySelector('[name="tipo"]')?.value.substring(0, 3).toUpperCase();
-        if (tip) prefix = `CBL-${tip}`;
+        const cat = formEl.querySelector('[name="categoria"]')?.value.trim().substring(0, 1).toUpperCase();
+        const ubi = formEl.querySelector('[name="ubicacion"]')?.value.trim().substring(0, 3).toUpperCase();
+        const nom = formEl.querySelector('[name="nombre"]')?.value.trim().toUpperCase().replace(/\s+/g, '').substring(0, 3);
+        if (cat && ubi && nom) prefix = `${cat}-${ubi}-${nom}`;
+    } else if (formType === 'cable') {
+        const tip = formEl.querySelector('[name="tipo"]')?.value.trim().toUpperCase().replace(/\s+/g, '-');
+        if (tip) prefix = `C-${tip}`;
+    } else if (formType === 'conexion') {
+        const ori = formEl.querySelector('[name="id_origen"]')?.value;
+        const des = formEl.querySelector('[name="id_destino"]')?.value;
+        if (ori && des) prefix = `${ori}/${des}`;
     }
 
     if (!prefix) return;
 
-    const existing = [...db.equipos, ...db.cables].filter(i => (i.ID_Equipo || i.ID_Cable || '').startsWith(prefix));
+    const collection = formType === 'equipo' ? db.equipos : (formType === 'cable' ? db.cables : db.conexiones);
+    const idField = formType === 'equipo' ? 'ID_Equipo' : (formType === 'cable' ? 'ID_Cable' : 'ID_Patch');
+
+    const existing = collection.filter(i => {
+        const id = i[idField] || '';
+        return id.startsWith(prefix);
+    });
+    
     let max = 0;
+    let exactMatch = false;
+
     existing.forEach(i => {
-        const num = parseInt((i.ID_Equipo || i.ID_Cable).split('-').pop());
+        const id = i[idField];
+        if (id === prefix) {
+            exactMatch = true;
+            return;
+        }
+        const numPart = id.substring(prefix.length);
+        const num = parseInt(numPart);
         if (!isNaN(num) && num > max) max = num;
     });
 
-    const newId = `${prefix}-${String(max + 1).padStart(3, '0')}`;
-    const targetInput = formEl.querySelector('[name="id"]');
-    if (targetInput && !targetInput.value.includes(prefix)) {
+    let newId = prefix;
+    if (exactMatch || max > 0) {
+        newId = `${prefix}${max + 1}`;
+    }
+
+    const targetInput = formEl.querySelector('[name="id"]') || formEl.querySelector('[name="id_patch"]');
+    
+    if (targetInput && (!targetInput.value || targetInput.dataset.auto === 'true')) {
         targetInput.value = newId;
+        targetInput.dataset.auto = 'true';
     }
 }
 
@@ -1582,6 +1613,7 @@ async function preparePrintLabels(type) {
 }
 
 function generateEquipoLabel(item) {
+    const notesHtml = item.Notas ? `<div class="notes-line">${item.Notas}</div>` : '';
     return `
         <div class="label-base label-equipo">
             <div class="qr-side">
@@ -1590,9 +1622,10 @@ function generateEquipoLabel(item) {
             </div>
             <div class="data-side">
                 <div class="title-bold">${item.Nombre || 'S/N'}</div>
+                ${notesHtml}
                 <div class="data-line"><span class="material-icons">category</span> ${item.Categoria || '-'}</div>
                 <div class="data-line"><span class="material-icons">location_on</span> ${item.Ubicacion_Uso || '-'}</div>
-                <div class="data-line"><span class="material-icons">home</span> ${item.Lugar_Guardado_Final || '-'}</div>
+                <div class="data-line"><span class="material-icons">inventory_2</span> ${item.Lugar_Guardado_Final || '-'}</div>
                 <div class="data-line"><span class="material-icons">person</span> ${item.Propietario || '-'}</div>
             </div>
         </div>
@@ -1600,23 +1633,26 @@ function generateEquipoLabel(item) {
 }
 
 function generateCableLabel(item) {
-    const content = `
-        <div class="qr-canvas"></div>
+    const notesHtml = item.Notas ? `<div class="notes-line">${item.Notas}</div>` : '';
+    const dataHtml = `
         <div class="data-col">
             <div class="id-bold">${item.ID_Cable}</div>
+            ${notesHtml}
             <div class="grid-data">
                 <div class="data-line"><span class="material-icons">cable</span> ${item.Tipo_Conector || '-'}</div>
                 <div class="data-line"><span class="material-icons">straighten</span> ${item.Longitud_m || '-'}m</div>
-                <div class="data-line"><span class="material-icons">home</span> ${item.Lugar_Guardado_Final || '-'}</div>
+                <div class="data-line"><span class="material-icons">inventory_2</span> ${item.Lugar_Guardado_Final || '-'}</div>
                 <div class="data-line"><span class="material-icons">person</span> ${item.Propietario || '-'}</div>
             </div>
         </div>
     `;
+    const qrHtml = `<div class="qr-canvas"></div>`;
+
     return `
         <div class="label-base label-cable">
-            <div class="zone">${content}</div>
+            <div class="zone">${qrHtml}${dataHtml}</div>
             <div class="pegado">┄ doblar ┄</div>
-            <div class="zone">${content}</div>
+            <div class="zone">${dataHtml}${qrHtml}</div>
         </div>
     `;
 }
