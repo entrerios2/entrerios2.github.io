@@ -598,3 +598,69 @@ El error está así:
 - [ ] Frontend: Los enlaces del menú se generan iterando los metadatos de configuración.
 - [ ] Frontend: Modal de conexión soporta `Notas` pero el árbol NO las renderiza.
 - [ ] Frontend: Fichas y etiquetas QR reflejan los nuevos nombres de propiedades.
+
+---
+
+### PROMPT 17: Corrección de Puertos en Árbol de Conexiones (Fixed Ports)
+
+**Contexto:** En la visualización del árbol de conexiones (fichas), si un nodo padre o hijo tiene múltiples conexiones, `renderTreeNode` renderiza un `<select>` que a menudo no coincide con la conexión real por la cual se trazó el camino. Hay que fijar la visualización del puerto para la conexión que enlaza al nodo con la cadena.
+
+**TAREA 1: Actualizar firma de `renderTreeNode`**
+- En `app.js`, buscar `function renderTreeNode(id, isCentral)` y cambiarla a:
+  `function renderTreeNode(id, isCentral, fixedInputConn = null, fixedOutputConn = null)`
+
+**TAREA 2: Modificar renderizado de "port-pill" en `renderTreeNode`**
+- Para las entradas (inputs), reemplazar la lógica actual de inserción del texto/select por:
+  ```javascript
+  if (fixedInputConn) {
+      pill.innerHTML += fixedInputConn.Puerto_Destino;
+  } else if (inputs.length === 1) {
+      pill.innerHTML += inputs[0].Puerto_Destino;
+  } else {
+      pill.appendChild(renderPortSelect(id, inputs, 'back'));
+  }
+  ```
+- Para las salidas (outputs), reemplazar la lógica por:
+  ```javascript
+  if (fixedOutputConn) {
+      pill.innerHTML += fixedOutputConn.Puerto_Origen;
+  } else if (outputs.length === 1) {
+      pill.innerHTML += outputs[0].Puerto_Origen;
+  } else {
+      pill.appendChild(renderPortSelect(id, outputs, 'forward'));
+  }
+  ```
+
+**TAREA 3: Pasar los enlaces fijos desde `renderTree`**
+- En la función `renderTree(centralId, shouldScroll = true)`:
+- En el bloque que iterar sobre los padres (`parents.reverse().forEach((p, index, arr) => { ... })`), calcular `fixedInput` y `fixedOutput` e inyectarlos:
+  ```javascript
+  parents.reverse().forEach((p, index, arr) => {
+      const fixedOutput = p.conn;
+      const fixedInput = (index > 0) ? arr[index - 1].conn : null;
+      container.appendChild(renderTreeNode(p.id, false, fixedInput, fixedOutput));
+      container.appendChild(renderTreeConnection(p.conn, 'down'));
+  });
+  ```
+- Actualizar el llamado del nodo central para pasar nulos explícitamente:
+  `container.appendChild(renderTreeNode(centralId, true, null, null));`
+- En el bloque de hijos (`children.forEach((c, index, arr) => { ... })`):
+  ```javascript
+  children.forEach((c, index, arr) => {
+      const fixedInput = c.conn;
+      const fixedOutput = (index < arr.length - 1) ? arr[index + 1].conn : null;
+      container.appendChild(renderTreeConnection(c.conn, 'down'));
+      container.appendChild(renderTreeNode(c.id, false, fixedInput, fixedOutput));
+  });
+  ```
+
+**TAREA 4: Asegurar estado inicial en `renderPortSelect`**
+- En `renderPortSelect`, asegurarse que la opción por defecto concuerde con lo que elige `tracePath`. Reemplazar la asignación de `targetId === currentChoice` por:
+  ```javascript
+  const actualChoice = currentChoice || (direction === 'forward' ? conns[0].ID_Destino : conns[0].ID_Origen);
+  // ...
+  return `<option value="${targetId}" ${targetId === actualChoice ? 'selected' : ''}>${port} → ${targetId}</option>`;
+  ```
+
+**TAREA 5: Incrementar cache busting**
+- En `index.html` subir versión `?v=XX.0`.

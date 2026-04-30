@@ -385,8 +385,16 @@ function renderInventory() {
                             return `
                                 <tr onclick="event.stopPropagation(); ${clickAction}" style="cursor:pointer">
                                     ${headers.map(h => {
-                                        const val = row[h] || '-';
+                                        let val = row[h] || '-';
                                         const colorClass = val === 'Conectado' ? 'status-green' : (val === 'Pendiente' ? 'status-red' : '');
+                                        
+                                        if (section.type === 'conexiones' && (h === 'ID_Origen' || h === 'ID_Destino')) {
+                                            const targetId = row[h];
+                                            const targetItem = db.cables.find(c => String(c.ID_Cable) === String(targetId));
+                                            const icon = targetItem ? 'cable' : 'speaker';
+                                            val = `<div style="display:flex; align-items:center; gap:4px;"><span class="material-icons" style="font-size:0.9rem; color:var(--accent-cyan)">${icon}</span>${val}</div>`;
+                                        }
+
                                         return `<td class="${colorClass}">${val}</td>`;
                                     }).join('')}
                                 </tr>
@@ -600,19 +608,24 @@ function renderTree(centralId, shouldScroll = false) {
         container.appendChild(btn);
     }
 
-    parents.reverse().forEach(p => {
-        container.appendChild(renderTreeNode(p.id, false));
+    // Render Nodes
+    parents.reverse().forEach((p, index, arr) => {
+        const fixedOutput = p.conn;
+        const fixedInput = (index > 0) ? arr[index - 1].conn : null;
+        container.appendChild(renderTreeNode(p.id, false, fixedInput, fixedOutput));
         container.appendChild(renderTreeConnection(p.conn, 'down'));
     });
 
     // 2. Central Node
-    container.appendChild(renderTreeNode(centralId, true));
+    container.appendChild(renderTreeNode(centralId, true, null, null));
 
     // 3. Trace Forwards (Children)
     const children = tracePath(centralId, 'forward', treeMaxDepth);
-    children.forEach(c => {
+    children.forEach((c, index, arr) => {
+        const fixedInput = c.conn;
+        const fixedOutput = (index < arr.length - 1) ? arr[index + 1].conn : null;
         container.appendChild(renderTreeConnection(c.conn, 'down'));
-        container.appendChild(renderTreeNode(c.id, false));
+        container.appendChild(renderTreeNode(c.id, false, fixedInput, fixedOutput));
     });
 
     if (children.length === treeMaxDepth) {
@@ -665,9 +678,9 @@ function tracePath(startId, direction, maxDepth) {
     return path;
 }
 
-function renderTreeNode(id, isCentral) {
+function renderTreeNode(id, isCentral, fixedInputConn = null, fixedOutputConn = null) {
     const info = getItemById(id);
-    const isCable = id.startsWith('CBL');
+    const isCable = !!info?.ID_Cable;
     const el = document.createElement('div');
     el.className = `tree-node ${isCentral ? 'central' : ''}`;
 
@@ -680,8 +693,14 @@ function renderTreeNode(id, isCentral) {
         const pill = document.createElement('div');
         pill.className = `port-pill input ${isConn ? 'connected' : 'pending'}`;
         pill.innerHTML = `<span class="material-icons" style="font-size:0.8rem">login</span>`;
-        if (inputs.length === 1) pill.innerHTML += inputs[0].Puerto_Destino;
-        else pill.appendChild(renderPortSelect(id, inputs, 'back'));
+        
+        if (fixedInputConn) {
+            pill.innerHTML += fixedInputConn.Puerto_Destino;
+        } else if (inputs.length === 1) {
+            pill.innerHTML += inputs[0].Puerto_Destino;
+        } else {
+            pill.appendChild(renderPortSelect(id, inputs, 'back'));
+        }
         el.appendChild(pill);
     }
 
@@ -690,8 +709,14 @@ function renderTreeNode(id, isCentral) {
         const pill = document.createElement('div');
         pill.className = `port-pill output ${isConn ? 'connected' : 'disconnected'}`;
         pill.innerHTML = `<span class="material-icons" style="font-size:0.8rem">logout</span>`;
-        if (outputs.length === 1) pill.innerHTML += outputs[0].Puerto_Origen;
-        else pill.appendChild(renderPortSelect(id, outputs, 'forward'));
+        
+        if (fixedOutputConn) {
+            pill.innerHTML += fixedOutputConn.Puerto_Origen;
+        } else if (outputs.length === 1) {
+            pill.innerHTML += outputs[0].Puerto_Origen;
+        } else {
+            pill.appendChild(renderPortSelect(id, outputs, 'forward'));
+        }
         el.appendChild(pill);
     }
 
@@ -699,7 +724,7 @@ function renderTreeNode(id, isCentral) {
         const estadoOpciones = ['En Uso', 'Guardado', 'Devuelto', 'Instalado', 'Preparado para instalar', 'Preparado para guardar'];
         const currentEstado = info?.Estado || 'Guardado';
         
-        el.innerHTML += `
+        el.insertAdjacentHTML('beforeend', `
             <button class="close-ficha-btn" onclick="clearSearch()" title="Cerrar"><span class="material-icons">close</span></button>
             <button class="print-btn-main" onclick="window.print()" title="Imprimir Ficha"><span class="material-icons">print</span></button>
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; padding-right:30px;">
@@ -787,9 +812,9 @@ function renderTreeNode(id, isCentral) {
                     ${outputs.map(c => renderPortListEntry(c, 'out')).join('')}
                 </div>
             </div>
-        `;
+        `);
     } else {
-        el.innerHTML += `
+        el.insertAdjacentHTML('beforeend', `
             <div style="display:flex; justify-content:space-between; align-items:center">
                 <div style="cursor:pointer" onclick="renderResults('${id}')">
                     <span class="badge-id">${id}</span>
@@ -798,7 +823,7 @@ function renderTreeNode(id, isCentral) {
                 </div>
                 <span class="material-icons" style="color:var(--text-secondary)">${isCable ? 'cable' : 'speaker'}</span>
             </div>
-        `;
+        `);
     }
 
     return el;
@@ -830,11 +855,12 @@ function renderPortListEntry(conn, type) {
 function renderPortSelect(nodeId, conns, direction) {
     const sel = document.createElement('select');
     const currentChoice = selectedBranches[`${nodeId}_${direction}`];
+    const actualChoice = currentChoice || (direction === 'forward' ? conns[0].ID_Destino : conns[0].ID_Origen);
     
     sel.innerHTML = conns.map(c => {
         const targetId = direction === 'forward' ? c.ID_Destino : c.ID_Origen;
         const port = direction === 'forward' ? c.Puerto_Origen : c.Puerto_Destino;
-        return `<option value="${targetId}" ${targetId === currentChoice ? 'selected' : ''}>${port} → ${targetId}</option>`;
+        return `<option value="${targetId}" ${targetId === actualChoice ? 'selected' : ''}>${port} → ${targetId}</option>`;
     }).join('');
 
     sel.onchange = (e) => {
@@ -1105,6 +1131,13 @@ function toggleAdminForm(type) {
     const form = document.getElementById(formId).cloneNode(true);
     form.style.display = 'grid';
     form.id = 'activeAdminForm';
+
+    const idInput = form.querySelector('[name="id"]') || form.querySelector('[name="id_patch"]');
+    if (idInput) {
+        idInput.addEventListener('input', () => {
+            idInput.dataset.auto = 'false';
+        });
+    }
     
     // Reset to "New" mode
     form.querySelector('[name="isEdit"]').value = 'false';
@@ -1141,6 +1174,7 @@ function closeAdminModal() {
 
 function editItem(type, id) {
     updateSelects();
+    const isEdit = true;
     console.log('editItem triggered:', type, id);
     const item = db[type].find(i => {
         const itemId = String(i.ID_Equipo || i.ID_Cable || i.ID_Patch || '');
@@ -1169,10 +1203,10 @@ function editItem(type, id) {
         'categoria': 'Categoria',
         'ubicacion': 'Ubicacion',
         'propietario': 'Propietario',
-        'lugar': 'Contenedor',
+        'contenedor': 'Contenedor',
         'notas': 'Notas',
         'tipo': 'Tipo',
-        'longitud': 'Largo',
+        'largo': 'Largo',
         'id_patch': 'ID_Patch',
         'id_origen': 'ID_Origen',
         'puerto_origen': 'Puerto_Origen',
@@ -1188,7 +1222,12 @@ function editItem(type, id) {
             input.value = item[dbKey];
         }
         if (input.name === 'id' || input.name === 'id_patch') {
-            input.readOnly = true; // Prevent changing ID
+            input.readOnly = isEdit; // Permitir edición si es nuevo
+            if (!isEdit) {
+                input.addEventListener('input', () => {
+                    input.dataset.auto = 'false';
+                });
+            }
         }
     });
 
@@ -1376,7 +1415,9 @@ function updateSelects() {
     const options = [...db.equipos, ...db.cables].map(item => {
         const id = item.ID_Equipo || item.ID_Cable;
         const nombre = item.Nombre || item.Tipo || '';
-        const displayName = nombre ? `${id} (${nombre})` : id;
+        const isCable = !!item.ID_Cable;
+        const icon = isCable ? '🔌' : '🔊';
+        const displayName = nombre ? `${icon} ${id} (${nombre})` : `${icon} ${id}`;
         return `<option value="${id}">${displayName}</option>`;
     }).join('');
 
@@ -1391,7 +1432,9 @@ function populateDatalists() {
         'list_ubicaciones': new Set([...db.equipos, ...db.cables].map(i => i.Ubicacion)),
         'list_propietarios': new Set([...db.equipos, ...db.cables].map(i => i.Propietario)),
         'list_lugares': new Set([...db.equipos, ...db.cables].map(i => i.Contenedor)),
-        'list_conectores': new Set(db.cables.map(c => c.Tipo))
+        'list_conectores': new Set(db.cables.map(c => c.Tipo)),
+        'list_seniales': new Set(db.conexiones.map(c => c.Tipo_Senial)),
+        'list_puertos': new Set([...db.conexiones.map(c => c.Puerto_Origen), ...db.conexiones.map(c => c.Puerto_Destino)])
     };
 
     for (const [id, values] of Object.entries(lists)) {
