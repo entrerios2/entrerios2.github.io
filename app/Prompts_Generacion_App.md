@@ -297,9 +297,42 @@ otas.
 >   - **Notas de Mantenimiento:** Lista todas las notas. Agrega allí mismo un <textarea> minimalista y un botón para "Agregar Nota".
 > 
 > **TAREA 4: Salto desde la Tabla de Conexiones**
-> - En el listado agrupado del inventario de "Operación", si el usuario hace clic sobre una fila de la tabla de **Conexiones**, invoca enderResults() pasándole el ID_Origen de esa conexión (o el destino), para que el usuario sea transportado al árbol de ruteo y pueda visualizar el contexto de lo que clickeó.
+> - In el listado agrupado del inventario de "Operación", si el usuario hace clic sobre una fila de la tabla de **Conexiones**, invoca `renderResults()` pasándole el ID_Origen de esa conexión (o el destino), para que el usuario sea transportado al árbol de ruteo y pueda visualizar el contexto de lo que clickeó.
 > 
 > **TAREA 5: Rediseño Absoluto de Administración (Modo Espejo)**
 > - La interfaz de "Administración" debe ser un **espejo** de la interfaz de "Operación". Usa exactamente los mismos 3 bloques colapsables (Equipos, Cables, Conexiones), permitiendo agruparlos con los <select>.
 > - Al hacer clic en un elemento de estas tablas en Administración, se debe abrir el **Formulario de Edición** correspondiente (no la ficha de Operación).
-> - **Estilos de Formularios Premium:** Aplica CSS de alta gama a los formularios. Usa display: grid, inputs amplios con bordes redondeados suaves (order-radius: 8px), padding generoso, outline vibrante al hacer focus, y haz que se adapten fluidamente (1 columna en móvil, 2 columnas en desktop).
+> - **Estilos de Formularios Premium:** Aplica CSS de alta gama a los formularios. Usa display: grid, inputs amplios con bordes redondeados suaves (border-radius: 8px), padding generoso, outline vibrante al hacer focus, y haz que se adapten fluidamente (1 columna en móvil, 2 columnas en desktop).
+
+---
+
+### PROMPT 12: Feedback Visual de Carga (Spinners) Globales
+
+**Contexto:** Actualmente, las acciones que modifican el estado en la base de datos (Google Sheets a través de Apps Script) funcionan en segundo plano (asíncronamente). Debido a que el backend puede tardar un par de segundos en procesar, el usuario no tiene certeza visual inmediata de que el guardado está en proceso.
+
+**Objetivo:** Implementar indicadores de carga (spinners) estéticos y universales en la UI para cada interacción que invoque un llamado asíncrono.
+
+**Instrucciones para el Agente:**
+
+1. **Creación del Componente Spinner (CSS)**
+   - En `styles.css`, agrega una clase `.spinner` minimalista y moderna. Usa un anillo semi-transparente con un borde superior de color acentuado (acorde a la paleta actual) y una animación `spin` fluida.
+   - Crea variaciones de tamaño (ej. `.spinner-sm` para botones o checkboxes, y `.spinner-btn` para alineación interna en botones).
+
+2. **Feedback en los Checkboxes de Conexión (Patch)**
+   - In la función `togglePatch` (en `app.js`), inmediatamente después de desactivar el checkbox (`checkboxEl.disabled = true;`), inyecta visualmente el `.spinner` al lado del input o reemplaza transitoriamente el `.checkmark`.
+   - Una vez que la promesa de `handleAction('UPDATE_PATCH')` y `logActivity` se resuelvan (o fallen en el `catch`), asegúrate de que el spinner desaparezca. Si `renderTree` se encarga de rehacer el DOM, está bien, pero el `catch` debe limpiar la UI en caso de error.
+
+3. **Feedback en los Formularios de Administración**
+   - In la función `handleFormSubmit()`:
+     - Antes del `await handleAction()`, deshabilita el botón de `submit` del formulario correspondiente.
+     - Cambia el texto/contenido del botón a algo como `<span class="spinner spinner-sm"></span> Guardando...`.
+     - Si la acción falla o termina, restaura el estado original del botón.
+
+4. **Feedback en Modificación Logística y Notas**
+   - In `handleUpdateLogistica()` (cambios desde los selects de logística), deshabilita el `select` y muéstrale el spinner al lado hasta que el `await` se resuelva.
+   - In la función que guarda las notas (dentro de la lógica de Mantenimiento), deshabilita el botón de enviar y muestra el spinner.
+
+5. **Actualización de Caché Estricta**
+   - Incrementa las variables de cache-busting en `index.html` para el script y estilos (por ejemplo, pasá a `?v=23.0`) para forzar la actualización en GitHub Pages.
+
+**Regla de Oro:** Garantizar siempre un bloque `try...finally` o lógica en los `catch` para que los botones NUNCA se queden deshabilitados perpetuamente si ocurre un error de red.

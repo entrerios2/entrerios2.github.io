@@ -14,6 +14,7 @@ let currentSort = { type: '', column: '', direction: 'asc' };
 let selectedBranches = {}; // nodeId -> choiceId (for tree navigation)
 let treeMaxDepth = 1; // Default depth for tree expansion
 let activeGroupings = { equipos: '', cables: '', conexiones: '' };
+let sectionsOpenState = { equipos: false, cables: false, conexiones: false };
 let html5QrCode = null;
 
 // DOM Elements
@@ -167,7 +168,7 @@ async function fetchData() {
  */
 async function logActivity(itemId, type, detail) {
     console.log(`Logging ${type} for ${itemId}: ${detail}`);
-    const item = getItemById(itemId) || db.conexiones.find(c => c.ID_Patch === itemId);
+    const item = getItemById(itemId) || db.conexiones.find(c => String(c.ID_Patch) === String(itemId));
     if (!item) return;
 
     let meta = { historial: [], notas: [] };
@@ -198,12 +199,14 @@ function formatRelativeDate(timestamp) {
     const now = new Date();
     const isToday = d.toDateString() === now.toDateString();
     
-    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Formato 24h: HH:mm
+    const timeStr = d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+    
     if (isToday) return timeStr;
     
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    return `${day}/${month} ${timeStr}`;
+    // Fecha y hora: DD/MM/AAAA HH:mm
+    const dateStr = d.toLocaleDateString('es-AR');
+    return `${dateStr} ${timeStr}`;
 }
 
 async function addNote(id) {
@@ -261,7 +264,7 @@ function highlightText(text, query) {
 }
 
 function getItemById(id) {
-    return [...db.equipos, ...db.cables].find(i => (i.ID_Equipo || i.ID_Cable) === id);
+    return [...db.equipos, ...db.cables].find(i => String(i.ID_Equipo || i.ID_Cable) === String(id));
 }
 
 /**
@@ -298,7 +301,12 @@ function renderInventory() {
     sections.forEach(section => {
         const details = document.createElement('details');
         details.className = 'premium-details main-section';
-        if (activeGroupings[section.type]) details.open = true;
+        if (activeGroupings[section.type] || sectionsOpenState[section.type]) details.open = true;
+        
+        details.ontoggle = () => {
+            if (details.open) sectionsOpenState[section.type] = true;
+            else sectionsOpenState[section.type] = false;
+        };
 
         const headers = (section.type === 'equipos') ? ['ID_Equipo', 'Nombre', 'Categoria', 'Ubicacion_Uso', 'Lugar_Guardado_Final', 'Estado_Logistica'] :
                       (section.type === 'cables') ? ['ID_Cable', 'Tipo_Conector', 'Longitud_m', 'Lugar_Guardado_Final', 'Estado_Logistica'] :
@@ -374,7 +382,18 @@ function renderInventory() {
         const contentDiv = document.createElement('div');
         contentDiv.className = 'details-content';
 
-        const data = [...db[section.type]];
+        let data = [...db[section.type]];
+        if (currentSort.type === section.type) {
+            data.sort((a, b) => {
+                let valA = a[currentSort.column] || '';
+                let valB = b[currentSort.column] || '';
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
         const currentGroup = activeGroupings[section.type];
 
         if (!currentGroup) {
@@ -480,7 +499,7 @@ function renderResults(specificId = null, pushState = true) {
     }
 
     if (specificId) {
-        renderTree(specificId);
+        renderTree(specificId, true);
         return;
     }
 
@@ -520,7 +539,7 @@ function renderResults(specificId = null, pushState = true) {
     }
 }
 
-function renderTree(centralId) {
+function renderTree(centralId, shouldScroll = false) {
     resultsContainer.innerHTML = '';
     const container = document.createElement('div');
     container.className = 'tree-container';
@@ -533,7 +552,7 @@ function renderTree(centralId) {
         btn.className = 'expand-tree-btn';
         btn.innerHTML = '<span class="material-icons">keyboard_double_arrow_up</span>';
         btn.title = "Expandir Origen";
-        btn.onclick = () => { treeMaxDepth++; renderTree(centralId); };
+        btn.onclick = () => { treeMaxDepth++; renderTree(centralId, false); };
         container.appendChild(btn);
     }
 
@@ -557,11 +576,21 @@ function renderTree(centralId) {
         btn.className = 'expand-tree-btn';
         btn.innerHTML = '<span class="material-icons">keyboard_double_arrow_down</span>';
         btn.title = "Expandir Destino";
-        btn.onclick = () => { treeMaxDepth++; renderTree(centralId); };
+        btn.onclick = () => { treeMaxDepth++; renderTree(centralId, false); };
         container.appendChild(btn);
     }
 
     resultsContainer.appendChild(container);
+    
+    // Smooth scroll only if explicitly requested (e.g. opening a new ficha)
+    if (shouldScroll) {
+        setTimeout(() => {
+            const central = container.querySelector('.tree-node.central');
+            if (central) {
+                central.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 100);
+    }
 }
 
 function tracePath(startId, direction, maxDepth) {
@@ -615,7 +644,7 @@ function renderTreeNode(id, isCentral) {
     if (outputs.length > 0) {
         const isConn = outputs.some(c => c.Estado_Instalacion === 'Conectado');
         const pill = document.createElement('div');
-        pill.className = `port-pill output ${isConn ? 'connected' : 'pending'}`;
+        pill.className = `port-pill output ${isConn ? 'connected' : 'disconnected'}`;
         pill.innerHTML = `<span class="material-icons" style="font-size:0.8rem">logout</span>`;
         if (outputs.length === 1) pill.innerHTML += outputs[0].Puerto_Origen;
         else pill.appendChild(renderPortSelect(id, outputs, 'forward'));
@@ -638,13 +667,22 @@ function renderTreeNode(id, isCentral) {
                 <div class="meta-pill" title="Propietario"><span class="material-icons" style="font-size:0.9rem">person</span> ${info?.Propietario || '-'}</div>
                 <div class="meta-pill" title="Ubicación"><span class="material-icons" style="font-size:0.9rem">location_on</span> ${info?.Ubicacion_Uso || '-'}</div>
                 <div class="meta-pill" title="Contenedor"><span class="material-icons" style="font-size:0.9rem">inventory_2</span> ${info?.Lugar_Guardado_Final || '-'}</div>
+                ${!isCable && info?.Categoria ? `<div class="meta-pill" title="Categoría"><span class="material-icons" style="font-size:0.9rem">category</span> ${info.Categoria}</div>` : ''}
+                ${isCable ? `
+                    ${info?.Tipo_Conector ? `<div class="meta-pill" title="Tipo"><span class="material-icons" style="font-size:0.9rem">cable</span> ${info.Tipo_Conector}</div>` : ''}
+                    ${info?.Longitud_m ? `<div class="meta-pill" title="Largo"><span class="material-icons" style="font-size:0.9rem">straighten</span> ${info.Longitud_m}m</div>` : ''}
+                ` : ''}
+                ${info?.Notas ? `<div class="meta-pill" title="Notas Tabla"><span class="material-icons" style="font-size:0.9rem">description</span> ${info.Notas}</div>` : ''}
             </div>
 
             <div style="margin-top:10px; margin-bottom:15px;">
-                <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Estado Logístico:</label>
-                <select class="premium-select" style="width:100%" onchange="handleUpdateLogistica('${id}', this.value)">
-                    ${estadoOpciones.map(opt => `<option value="${opt}" ${opt === currentEstado ? 'selected' : ''}>${opt}</option>`).join('')}
-                </select>
+                <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Estado:</label>
+                <div class="premium-select-wrapper">
+                    <select class="premium-select" style="width:100%" onchange="handleUpdateLogistica('${id}', this.value, this)">
+                        ${estadoOpciones.filter(opt => opt !== 'En Uso').map(opt => `<option value="${opt}" ${opt === currentEstado ? 'selected' : ''}>${opt}</option>`).join('')}
+                    </select>
+                    <span class="material-icons select-chevron">expand_more</span>
+                </div>
             </div>
 
             ${(() => {
@@ -729,7 +767,7 @@ function renderPortListEntry(conn, type) {
     const targetName = targetInfo?.Nombre || targetInfo?.Tipo_Conector || targetId;
 
     return `
-        <div class="port-entry ${isConn ? 'connected' : 'pending'}" onclick="renderResults('${targetId}')">
+        <div class="port-entry ${isConn ? 'connected' : 'disconnected'}" onclick="renderResults('${targetId}')">
             <span class="material-icons" style="font-size:0.8rem">${type === 'in' ? 'login' : 'logout'}</span>
             <div style="flex:1; overflow:hidden">
                 <div class="port-name">${port}</div>
@@ -767,31 +805,141 @@ function renderTreeConnection(conn, direction) {
     const el = document.createElement('div');
     el.className = 'connection-jump';
     el.innerHTML = `
-        <div class="arrow-line ${isConnected ? 'connected' : 'pending'}" 
-             style="cursor:pointer" title="Cambiar estado: ${conn.Estado_Instalacion}" 
-             onclick="togglePatch('${conn.ID_Patch}')">
+        <div class="arrow-line ${isConnected ? 'connected' : 'disconnected'}" 
+             style="cursor:pointer" title="Ver detalles de conexión" 
+             onclick="showConnectionModal('${conn.ID_Patch}')">
             <div class="signal-pill">${conn.Tipo_Senial}</div>
         </div>
     `;
     return el;
 }
 
-async function togglePatch(idPatch, checkboxEl) {
-    console.log('Toggling patch:', idPatch);
-    const conn = db.conexiones.find(c => c.ID_Patch === idPatch);
+function showConnectionModal(idPatch) {
+    const conn = db.conexiones.find(c => String(c.ID_Patch) === String(idPatch));
     if (!conn) return;
 
+    let meta = { historial: [], notas: [] };
+    try { if (conn.Metadatos) meta = JSON.parse(conn.Metadatos); } catch(e){}
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'connectionModal';
+    overlay.style.display = 'flex';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    const lastNote = meta.notas.length > 0 ? meta.notas[meta.notas.length-1] : null;
+    const lastMove = meta.historial.length > 0 ? meta.historial[meta.historial.length-1] : null;
+
+    overlay.innerHTML = `
+        <div class="tree-node central" style="width:100%; max-width:400px; padding:1.5rem; position:relative; box-shadow: 0 10px 40px rgba(0,0,0,0.8); animation: fadeInUp 0.3s ease-out;">
+            <button class="close-ficha-btn" onclick="this.closest('.modal-overlay').remove()"><span class="material-icons">close</span></button>
+            
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; padding-right:30px;">
+                <span class="material-icons" style="color:var(--accent-cyan); font-size:1.5rem;">settings_input_component</span>
+                <h2 style="margin:0; font-size:1.1rem; line-height:1.2">Detalles de Conexión</h2>
+                <span class="badge-id" style="font-size:0.75rem; padding:0.3rem 0.6rem;">${idPatch}</span>
+            </div>
+
+            <div class="compact-meta" style="margin-bottom:1rem">
+                <div class="meta-pill" title="Origen"><span class="material-icons" style="font-size:0.9rem">login</span> ${conn.ID_Origen} (${conn.Puerto_Origen})</div>
+                <div class="meta-pill" title="Destino"><span class="material-icons" style="font-size:0.9rem">logout</span> ${conn.ID_Destino} (${conn.Puerto_Destino})</div>
+                <div class="meta-pill" title="Señal"><span class="material-icons" style="font-size:0.9rem">wifi_tethering</span> ${conn.Tipo_Senial}</div>
+                <div class="meta-pill" title="Estado"><span class="material-icons" style="font-size:0.9rem">info</span> ${conn.Estado_Instalacion}</div>
+            </div>
+
+            <details class="premium-details mini">
+                <summary>
+                    <span class="material-icons chevron">expand_more</span>
+                    <span class="material-icons" style="font-size:1rem; color:var(--accent-cyan)">chat</span>
+                    ${lastNote ? `<span style="font-size:0.75rem"><b>${formatRelativeDate(lastNote.timestamp)}</b> ${lastNote.detalle}</span>` : '<span style="font-size:0.75rem; color:var(--text-secondary)">Sin notas</span>'}
+                </summary>
+                <div class="details-content notes-list">
+                    <div class="add-note-box">
+                        <textarea id="conn_note_input_${idPatch}" placeholder="Escribe una nota..."></textarea>
+                        <button class="action-btn btn-primary btn-mini" onclick="addConnectionNote('${idPatch}')">Agregar Nota</button>
+                    </div>
+                    ${meta.notas.slice().reverse().map(n => `
+                        <div class="trace-entry">
+                            <span class="trace-date">${formatRelativeDate(n.timestamp)}</span>
+                            <span class="trace-user">${n.nombre}:</span>
+                            <span class="trace-detail">${n.detalle}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </details>
+
+            <details class="premium-details mini">
+                <summary>
+                    <span class="material-icons chevron">expand_more</span>
+                    <span class="material-icons" style="font-size:1rem; color:var(--accent-cyan)">history</span>
+                    ${lastMove ? `<span style="font-size:0.75rem"><b>${formatRelativeDate(lastMove.timestamp)}</b> ${lastMove.detalle}</span>` : '<span style="font-size:0.75rem; color:var(--text-secondary)">Sin movimientos</span>'}
+                </summary>
+                <div class="details-content history-list">
+                    ${meta.historial.slice().reverse().map(h => `
+                        <div class="trace-entry">
+                            <span class="trace-date">${formatRelativeDate(h.timestamp)}</span>
+                            <span class="trace-user">${h.nombre}:</span>
+                            <span class="trace-detail">${h.detalle}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </details>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+async function addConnectionNote(idPatch) {
+    const input = document.getElementById(`conn_note_input_${idPatch}`);
+    const detail = input.value.trim();
+    if (!detail) return;
+
+    const btn = input.nextElementSibling;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner spinner-sm"></span>';
+
+    try {
+        await logActivity(idPatch, 'NOTE', detail);
+        input.value = '';
+        const modal = document.getElementById('connectionModal');
+        if (modal) {
+            modal.remove();
+            showConnectionModal(idPatch);
+        }
+    } catch (e) {
+        console.error("Failed to add connection note:", e);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+}
+
+async function togglePatch(idPatch, checkboxEl) {
+    console.log('Toggling patch:', idPatch);
+    const conn = db.conexiones.find(c => String(c.ID_Patch) === String(idPatch));
+    if (!conn) return;
+
+    let spinner;
     if (checkboxEl) {
         checkboxEl.disabled = true;
         const entryDiv = checkboxEl.closest('.port-entry');
-        if (entryDiv) entryDiv.style.opacity = '0.5';
+        if (entryDiv) {
+            entryDiv.style.opacity = '0.5';
+            spinner = document.createElement('span');
+            spinner.className = 'spinner spinner-sm';
+            spinner.style.marginLeft = '10px';
+            checkboxEl.parentElement.appendChild(spinner);
+        }
     }
 
-    const newState = conn.Estado_Instalacion === 'Conectado' ? 'Pendiente' : 'Conectado';
+    const newState = conn.Estado_Instalacion === 'Conectado' ? 'Desconectado' : 'Conectado';
 
     try {
         await handleAction('UPDATE_PATCH', { id: idPatch, value: newState });
-        await logActivity(idPatch, 'MOVE', `Conexión: ${newState}`);
+        await logActivity(idPatch, 'MOVE', newState);
         
         // Refresh UI
         const centralNode = document.querySelector('.tree-node.central .badge-id');
@@ -806,6 +954,10 @@ async function togglePatch(idPatch, checkboxEl) {
         if (checkboxEl) {
             checkboxEl.disabled = false;
             checkboxEl.checked = !checkboxEl.checked;
+        }
+    } finally {
+        if (spinner && spinner.parentElement) {
+            spinner.remove();
         }
     }
 }
@@ -968,6 +1120,9 @@ function editItem(type, id) {
 async function handleFormSubmit(e, formId) {
     e.preventDefault();
     const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalBtnHTML = submitBtn.innerHTML;
+
     const formData = new FormData(form);
     const body = Object.fromEntries(formData.entries());
     const isEdit = body.isEdit === 'true';
@@ -977,11 +1132,23 @@ async function handleFormSubmit(e, formId) {
     if (formId === 'formCable') action = isEdit ? 'EDIT_CABLE' : 'ADD_CABLE';
     if (formId === 'formRuteo') action = isEdit ? 'EDIT_CONEXION' : 'ADD_CONEXION';
 
-    const success = await handleAction(action, body);
-    if (success) {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<span class="spinner spinner-sm spinner-btn"></span> Guardando...`;
+
+    try {
+        const success = await handleAction(action, body);
+        if (success) {
+            closeAdminModal();
+            renderInventory(); // Refresh view
+            populateDatalists();
+        }
+    } catch (e) {
+        console.error("Submit failed:", e);
+        alert("Error al guardar. Se intentará sincronizar luego.");
         closeAdminModal();
-        renderInventory(); // Refresh view
-        populateDatalists();
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnHTML;
     }
 }
 
@@ -1002,7 +1169,7 @@ async function handleAction(action, body) {
         const type = action.includes('EQUIPO') ? 'equipos' : (action.includes('CABLE') ? 'cables' : 'conexiones');
         const idKey = type === 'equipos' ? 'ID_Equipo' : (type === 'cables' ? 'ID_Cable' : 'ID_Patch');
         const idVal = body.id || body.id_patch;
-        const index = db[type].findIndex(i => i[idKey] === idVal);
+        const index = db[type].findIndex(i => String(i[idKey]) === String(idVal));
         if (index !== -1) {
             const entry = mapToDb(body, type);
             db[type][index] = { ...db[type][index], ...entry };
@@ -1011,10 +1178,10 @@ async function handleAction(action, body) {
         const item = getItemById(body.id);
         if (item) item.Estado_Logistica = body.value;
     } else if (action === 'UPDATE_PATCH') {
-        const conn = db.conexiones.find(c => c.ID_Patch === body.id);
+        const conn = db.conexiones.find(c => String(c.ID_Patch) === String(body.id));
         if (conn) conn.Estado_Instalacion = body.value;
     } else if (action === 'UPDATE_METADATOS') {
-        const item = getItemById(body.id) || db.conexiones.find(c => c.ID_Patch === body.id);
+        const item = getItemById(body.id) || db.conexiones.find(c => String(c.ID_Patch) === String(body.id));
         if (item) item.Metadatos = body.value;
     }
 
@@ -1027,9 +1194,11 @@ async function handleAction(action, body) {
             setTimeout(() => searchInput.placeholder = originalText, 2000);
             return true;
         } catch (e) {
+            console.error("Fetch failed in handleAction, queueing offline:", e);
             queueAction({ action, body });
         }
     } else {
+        console.warn("Navigator offline, queueing action:", action);
         queueAction({ action, body });
     }
     
@@ -1055,17 +1224,47 @@ async function sendToServer(action, body) {
     return res;
 }
 
-async function handleUpdateLogistica(id, newState) {
+async function handleUpdateLogistica(id, newState, selectEl) {
     const item = getItemById(id);
     if (!item) return;
 
+    if (selectEl) selectEl.disabled = true;
     const oldState = item.Estado_Logistica || 'Desconocido';
-    await handleAction('UPDATE_LOGISTICA', { id: id, value: newState });
+
+    try {
+        await handleAction('UPDATE_LOGISTICA', { id: id, value: newState });
+        await logActivity(id, 'MOVE', newState);
+        renderTree(id);
+    } catch (e) {
+        console.error("Logistica update failed:", e);
+    } finally {
+        if (selectEl) selectEl.disabled = false;
+    }
+}
+
+async function addNote(id) {
+    const input = document.getElementById(`note_input_${id}`);
+    const detail = input.value.trim();
+    if (!detail) return;
+
+    const btn = input.nextElementSibling;
+    const originalText = btn.innerHTML;
     
-    // Log activity
-    logActivity(id, 'MOVE', `Cambio de estado: ${oldState} -> ${newState}`);
-    
-    renderTree(id);
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner spinner-sm"></span>';
+
+    try {
+        await logActivity(id, 'NOTE', detail);
+        input.value = '';
+        renderTree(id);
+    } catch (e) {
+        console.error("Failed to add note:", e);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
 }
 
 function updateSelects() {
@@ -1207,33 +1406,41 @@ function shareApp() {
 
 // Sidebar listeners
 menuBtn.addEventListener('click', () => sideMenu.classList.add('active'));
+activeModeDisplay.addEventListener('click', () => sideMenu.classList.add('active'));
 closeMenuBtn.addEventListener('click', () => sideMenu.classList.remove('active'));
 window.addEventListener('click', (e) => { if (e.target === sideMenu) sideMenu.classList.remove('active'); });
 
-qrStartBtn.addEventListener('click', () => {
-    const readerDiv = document.getElementById('reader');
-    if (readerDiv.style.display === 'block') {
-        readerDiv.style.display = 'none';
-        if (html5QrCode) html5QrCode.stop();
-        return;
-    }
+const qrModal = document.getElementById('qrModal');
+const closeQrBtn = document.getElementById('closeQrBtn');
 
-    readerDiv.style.display = 'block';
-    html5QrCode = new Html5Qrcode("reader");
+qrStartBtn.addEventListener('click', () => {
+    qrModal.style.display = 'flex';
+    if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+    
     html5QrCode.start(
         { facingMode: "environment" }, 
         { fps: 10, qrbox: { width: 250, height: 250 } },
         (decodedText) => {
             searchInput.value = decodedText;
-            readerDiv.style.display = 'none';
+            qrModal.style.display = 'none';
             html5QrCode.stop();
             renderResults();
+            if (searchContainer.style.display === 'none') {
+                searchContainer.style.display = 'flex';
+            }
         },
         (errorMessage) => { /* Ignore errors */ }
     ).catch(err => {
         alert('Error al abrir cámara: ' + err);
-        readerDiv.style.display = 'none';
+        qrModal.style.display = 'none';
     });
+});
+
+closeQrBtn.addEventListener('click', () => {
+    qrModal.style.display = 'none';
+    if (html5QrCode) {
+        html5QrCode.stop().catch(e => console.log("QR Stop error", e));
+    }
 });
 
 searchInput.addEventListener('input', () => renderResults());
