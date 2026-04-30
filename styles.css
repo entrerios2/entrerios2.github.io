@@ -369,9 +369,7 @@ input[type="text"]:focus {
 #reader {
   width: 100% !important;
   border-radius: 16px;
-  overflow: hidden;
   margin-bottom: 1rem;
-  display: none;
 }
 
 /* Admin Panel */

@@ -1447,7 +1447,14 @@ qrStartBtn.addEventListener('click', async () => {
     if (isQrScanning) return; // Ya está escaneando
 
     // Pequeño delay para asegurar que el modal tiene dimensiones reales en el DOM antes de que la cámara calcule su tamaño
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 500));
+
+    const readerEl = document.getElementById('reader');
+    console.log('QR DEBUG - reader dimensions:', readerEl.clientWidth, 'x', readerEl.clientHeight);
+    console.log('QR DEBUG - reader offsetParent:', readerEl.offsetParent);
+    console.log('QR DEBUG - reader computed display:', getComputedStyle(readerEl).display);
+    console.log('QR DEBUG - modal computed display:', getComputedStyle(qrModal).display);
+    console.log('QR DEBUG - reader parent width:', readerEl.parentElement.clientWidth);
 
     try {
         await html5QrCode.start(
