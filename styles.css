@@ -100,6 +100,26 @@ input[type="text"]:focus {
   transform: scale(0.9);
 }
 
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.icon-btn:hover {
+  color: var(--accent-cyan);
+}
+
+.icon-btn:active {
+  transform: scale(0.9);
+}
+
 /* Cards */
 .card {
   background: var(--card-bg);
@@ -1257,6 +1277,16 @@ tr:hover td {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+@keyframes spin-sync {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin-animation {
+  animation: spin-sync 1s linear infinite;
+  display: inline-block;
 }
 
 .loading-overlay {

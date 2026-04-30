@@ -167,6 +167,41 @@ async function fetchData() {
     }
 }
 
+async function refreshDatabase() {
+    const btn = document.getElementById('refreshBtn');
+    const icon = btn?.querySelector('.material-icons');
+    if (btn && icon) {
+        btn.disabled = true;
+        icon.classList.add('spin-animation');
+    }
+
+    try {
+        await fetchData();
+        populateDatalists();
+        updateSelects();
+        
+        // Re-render current view
+        const currentMode = localStorage.getItem('av_tech_mode') || 'OPERACION';
+        if (currentMode === 'ADMIN') {
+            renderAdminTable(currentSort.type || 'equipos');
+        } else {
+            const centralNode = document.querySelector('.tree-node.central .badge-id');
+            if (centralNode) {
+                renderTree(centralNode.innerText);
+            } else {
+                renderInventory();
+            }
+        }
+    } catch (e) {
+        console.error("Refresh failed:", e);
+    } finally {
+        if (btn && icon) {
+            btn.disabled = false;
+            icon.classList.remove('spin-animation');
+        }
+    }
+}
+
 function applyConfig() {
     if (!db.configuracion) return;
 
