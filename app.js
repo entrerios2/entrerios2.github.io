@@ -1088,7 +1088,11 @@ function renderAdminTable(type) {
     currentSort.type = type;
     const data = [...db[type]];
     
-    if (currentSort.column) {
+    // Default sort by ID if no column selected
+    const idKey = type === 'equipos' ? 'ID_Equipo' : (type === 'cables' ? 'ID_Cable' : 'ID_Patch');
+    if (!currentSort.column) {
+        data.sort((a, b) => String(a[idKey]).localeCompare(String(b[idKey])));
+    } else {
         data.sort((a, b) => {
             const valA = String(a[currentSort.column]).toLowerCase();
             const valB = String(b[currentSort.column]).toLowerCase();
@@ -1417,14 +1421,20 @@ function updateSelects() {
     const selOrigen = document.getElementById('selectOrigen');
     const selDestino = document.getElementById('selectDestino');
     
-    const options = [...db.equipos, ...db.cables].map(item => {
-        const id = item.ID_Equipo || item.ID_Cable;
-        const nombre = item.Nombre || item.Tipo || '';
-        const isCable = !!item.ID_Cable;
-        const icon = isCable ? '🔌' : '🔊';
-        const displayName = nombre ? `${icon} ${id} (${nombre})` : `${icon} ${id}`;
-        return `<option value="${id}">${displayName}</option>`;
-    }).join('');
+    const options = [...db.equipos, ...db.cables]
+        .sort((a, b) => {
+            const idA = a.ID_Equipo || a.ID_Cable || '';
+            const idB = b.ID_Equipo || b.ID_Cable || '';
+            return idA.localeCompare(idB);
+        })
+        .map(item => {
+            const id = item.ID_Equipo || item.ID_Cable;
+            const nombre = item.Nombre || item.Tipo || '';
+            const isCable = !!item.ID_Cable;
+            const icon = isCable ? '🔌' : '🔊';
+            const displayName = nombre ? `${icon} ${id} (${nombre})` : `${icon} ${id}`;
+            return `<option value="${id}">${displayName}</option>`;
+        }).join('');
 
     const placeholder = '<option value="">-- Seleccionar --</option>';
     if(selOrigen) selOrigen.innerHTML = placeholder + options;
