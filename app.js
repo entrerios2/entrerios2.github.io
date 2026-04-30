@@ -339,7 +339,7 @@ function renderInventory() {
                                 clickAction = `editItem('${section.type}', '${row[headers[0]]}')`;
                             } else {
                                 if (section.type === 'conexiones') {
-                                    clickAction = `renderResults('${row.ID_Origen}')`;
+                                    clickAction = `showConnectionModal('${row.ID_Patch}')`;
                                 } else {
                                     clickAction = `renderResults('${row[headers[0]]}')`;
                                 }
@@ -841,10 +841,25 @@ function showConnectionModal(idPatch) {
             </div>
 
             <div class="compact-meta" style="margin-bottom:1rem">
-                <div class="meta-pill" title="Origen"><span class="material-icons" style="font-size:0.9rem">login</span> ${conn.ID_Origen} (${conn.Puerto_Origen})</div>
-                <div class="meta-pill" title="Destino"><span class="material-icons" style="font-size:0.9rem">logout</span> ${conn.ID_Destino} (${conn.Puerto_Destino})</div>
+                <div class="meta-pill" title="Ver Origen" style="cursor:pointer" onclick="this.closest('.modal-overlay').remove(); renderResults('${conn.ID_Origen}')">
+                    <span class="material-icons" style="font-size:0.9rem">login</span> ${conn.ID_Origen} (${conn.Puerto_Origen})
+                </div>
+                <div class="meta-pill" title="Ver Destino" style="cursor:pointer" onclick="this.closest('.modal-overlay').remove(); renderResults('${conn.ID_Destino}')">
+                    <span class="material-icons" style="font-size:0.9rem">logout</span> ${conn.ID_Destino} (${conn.Puerto_Destino})
+                </div>
                 <div class="meta-pill" title="Señal"><span class="material-icons" style="font-size:0.9rem">wifi_tethering</span> ${conn.Tipo_Senial}</div>
-                <div class="meta-pill" title="Estado"><span class="material-icons" style="font-size:0.9rem">info</span> ${conn.Estado_Instalacion}</div>
+            </div>
+
+            <div style="margin-bottom:1rem; padding:10px; background:rgba(255,255,255,0.03); border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="material-icons" style="color:var(--accent-cyan); font-size:1.2rem">info</span>
+                    <span style="font-size:0.9rem; font-weight:600">${conn.Estado_Instalacion}</span>
+                </div>
+                <label class="premium-checkbox">
+                    <input type="checkbox" ${conn.Estado_Instalacion === 'Conectado' ? 'checked' : ''} 
+                           onchange="togglePatch('${idPatch}', this)">
+                    <span class="checkmark"></span>
+                </label>
             </div>
 
             <details class="premium-details mini">
@@ -942,6 +957,12 @@ async function togglePatch(idPatch, checkboxEl) {
         await logActivity(idPatch, 'MOVE', newState);
         
         // Refresh UI
+        const modal = document.getElementById('connectionModal');
+        if (modal) {
+            modal.remove();
+            showConnectionModal(idPatch);
+        }
+
         const centralNode = document.querySelector('.tree-node.central .badge-id');
         if (centralNode) {
             renderTree(centralNode.innerText);
@@ -1413,33 +1434,64 @@ window.addEventListener('click', (e) => { if (e.target === sideMenu) sideMenu.cl
 const qrModal = document.getElementById('qrModal');
 const closeQrBtn = document.getElementById('closeQrBtn');
 
-qrStartBtn.addEventListener('click', () => {
+let isQrScanning = false;
+
+qrStartBtn.addEventListener('click', async () => {
     qrModal.style.display = 'flex';
-    if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
     
-    html5QrCode.start(
-        { facingMode: "environment" }, 
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-            searchInput.value = decodedText;
-            qrModal.style.display = 'none';
-            html5QrCode.stop();
-            renderResults();
-            if (searchContainer.style.display === 'none') {
-                searchContainer.style.display = 'flex';
-            }
-        },
-        (errorMessage) => { /* Ignore errors */ }
-    ).catch(err => {
-        alert('Error al abrir cámara: ' + err);
+    // Si no existe la instancia, la creamos una sola vez
+    if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+    }
+
+    if (isQrScanning) return; // Ya está escaneando
+
+    // Pequeño delay para asegurar que el modal tiene dimensiones reales en el DOM antes de que la cámara calcule su tamaño
+    await new Promise(r => setTimeout(r, 100));
+
+    try {
+        await html5QrCode.start(
+            { facingMode: "environment" }, 
+            { 
+                fps: 10, 
+                qrbox: { width: 200, height: 200 }
+            },
+            (decodedText) => {
+                // Al leer, detenemos la cámara de forma segura
+                if (isQrScanning) {
+                    isQrScanning = false;
+                    html5QrCode.stop().then(() => {
+                        qrModal.style.display = 'none';
+                        searchInput.value = decodedText.trim();
+                        if (searchContainer.style.display === 'none') {
+                            searchContainer.style.display = 'flex';
+                        }
+                        renderResults(); // Dispara la búsqueda
+                    }).catch(err => console.log("Error deteniendo QR:", err));
+                }
+            },
+            (errorMessage) => { /* Ignore errors */ }
+        );
+        isQrScanning = true;
+    } catch (err) {
+        console.error('QR Critical failure:', err);
+        alert('No se pudo iniciar la cámara. Asegúrate de dar permisos.');
         qrModal.style.display = 'none';
-    });
+        isQrScanning = false;
+    }
 });
 
 closeQrBtn.addEventListener('click', () => {
-    qrModal.style.display = 'none';
-    if (html5QrCode) {
-        html5QrCode.stop().catch(e => console.log("QR Stop error", e));
+    if (html5QrCode && isQrScanning) {
+        isQrScanning = false;
+        html5QrCode.stop().then(() => {
+            qrModal.style.display = 'none';
+        }).catch(e => {
+            console.log("QR Stop error", e);
+            qrModal.style.display = 'none';
+        });
+    } else {
+        qrModal.style.display = 'none';
     }
 });
 

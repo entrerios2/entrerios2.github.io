@@ -1279,12 +1279,23 @@ tr:hover td {
   border-radius: 20px;
   margin-left: 15px;
   border: 1px solid rgba(255,255,255,0.1);
-  transition: all 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-10px);
 }
+
+.main-section[open] .grouping-capsule {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
 .grouping-capsule:hover {
   border-color: var(--accent-cyan);
   background: rgba(0, 242, 255, 0.05);
 }
+
 .grouping-capsule .material-icons {
   font-size: 1.1rem;
   color: var(--accent-cyan);
