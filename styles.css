@@ -2458,7 +2458,21 @@ body {
   .nav-actions .icon-btn { padding: 0.35rem; }
   .container { padding: 0 0.6rem; }
   .selector-filters .filter-row { grid-template-columns: 1fr 1fr; }
-  .visual-patch-line input { max-width: 100px; font-size: 0.7rem !important; }
+  .visual-patch-line input { max-width: 120px; }
+}
+
+/* Defensive overrides for iOS Safari zoom-on-focus.
+   pointer:coarse is more reliable than hover:none on Safari standalone PWA. */
+@media (pointer: coarse), (max-width: 768px) {
+  .map-filter-content select,
+  .map-filter-content input,
+  .visual-patch-line input,
+  .premium-select,
+  .premium-select-form,
+  .selector-filters input,
+  .selector-filters select {
+    font-size: 16px !important;
+  }
 }
 
 /* Reduced motion preference */

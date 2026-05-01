@@ -583,7 +583,7 @@ function updateMapFilterUI() {
     if (filterSignal) {
         filterSignal.innerHTML = `
             <label style="display:block; font-size:0.75rem; color:#888; margin-bottom:4px;">Señal</label>
-            <select onchange="activeMapFilters.signal = this.value || null; renderMapTopology()" style="width:100%; background:#2a2a2a; color:#fff; border:1px solid #444; border-radius:4px; padding:4px;">
+            <select onchange="activeMapFilters.signal = this.value || null; renderMapTopology()" style="width:100%; background:#2a2a2a; color:#fff; border:1px solid #444; border-radius:4px; padding:8px; font-size:16px;">
                 <option value="">Todas</option>${signals.map(s => `<option value="${s}" ${activeMapFilters.signal === s ? 'selected' : ''}>${s}</option>`).join('')}
             </select>`;
     }
@@ -592,7 +592,7 @@ function updateMapFilterUI() {
     if (filterUbicacion) {
         filterUbicacion.innerHTML = `
             <label style="display:block; font-size:0.75rem; color:#888; margin-bottom:4px;">Ubicación</label>
-            <select onchange="activeMapFilters.ubicacion = this.value || null; renderMapTopology()" style="width:100%; background:#2a2a2a; color:#fff; border:1px solid #444; border-radius:4px; padding:4px;">
+            <select onchange="activeMapFilters.ubicacion = this.value || null; renderMapTopology()" style="width:100%; background:#2a2a2a; color:#fff; border:1px solid #444; border-radius:4px; padding:8px; font-size:16px;">
                 <option value="">Todas</option>${locs.map(l => `<option value="${l}" ${activeMapFilters.ubicacion === l ? 'selected' : ''}>${l}</option>`).join('')}
             </select>`;
     }
@@ -601,7 +601,7 @@ function updateMapFilterUI() {
     if (filterCategoria) {
         filterCategoria.innerHTML = `
             <label style="display:block; font-size:0.75rem; color:#888; margin-bottom:4px;">Categoría</label>
-            <select onchange="activeMapFilters.categoria = this.value || null; renderMapTopology()" style="width:100%; background:#2a2a2a; color:#fff; border:1px solid #444; border-radius:4px; padding:4px;">
+            <select onchange="activeMapFilters.categoria = this.value || null; renderMapTopology()" style="width:100%; background:#2a2a2a; color:#fff; border:1px solid #444; border-radius:4px; padding:8px; font-size:16px;">
                 <option value="">Todas</option>${cats.map(c => `<option value="${c}" ${activeMapFilters.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}
             </select>`;
     }
