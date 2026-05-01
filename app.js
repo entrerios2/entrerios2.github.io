@@ -129,7 +129,7 @@ async function startApp() {
     const idParam = urlParams.get('id');
     const modeParam = urlParams.get('mode');
     
-    if (modeParam && ['OPERACION', 'ADMIN'].includes(modeParam)) {
+    if (modeParam && ['OPERACION', 'ADMIN', 'MAPA'].includes(modeParam)) {
         setMode(modeParam, false);
     } else {
         setMode('OPERACION', false);
@@ -775,6 +775,7 @@ function renderTreeNode(id, isCentral, fixedInputConn = null, fixedOutputConn = 
         const currentEstado = info?.Estado || 'Guardado';
         
         el.insertAdjacentHTML('beforeend', `
+            <button class="close-ficha-btn" style="right: 50px; color: var(--accent-cyan);" onclick="verEnMapa('${id}')" title="Ver en mapa"><span class="material-icons">my_location</span></button>
             <button class="close-ficha-btn" onclick="clearSearch()" title="Cerrar"><span class="material-icons">close</span></button>
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; padding-right:40px;">
                 <span class="material-icons" style="color:var(--accent-cyan); font-size:1.5rem;">${isCable ? 'cable' : 'speaker'}</span>
@@ -1674,18 +1675,27 @@ async function syncQueue() {
  */
 function setMode(mode, pushState = true) {
     currentMode = mode;
-    const modeTitle = mode === 'OPERACION' ? 'Operación' : 'Administración';
+    const modeTitle = mode === 'OPERACION' ? 'Operación' : (mode === 'ADMIN' ? 'Administración' : 'Mapa de Topología');
     document.getElementById('activeModeDisplay').innerText = modeTitle;
     
     sideMenu.classList.remove('active');
     if (pushState) history.pushState({ mode }, '', `?mode=${mode}`);
     
-    if (mode === 'ADMIN') {
+    const mapView = document.getElementById('mapView');
+    if (mode === 'MAPA') {
+        document.querySelector('.search-container').style.display = 'none';
+        resultsContainer.style.display = 'none';
+        adminPanel.style.display = 'none';
+        if (mapView) mapView.style.display = 'block';
+        if (typeof renderMapTopology === 'function') renderMapTopology();
+    } else if (mode === 'ADMIN') {
+        if (mapView) mapView.style.display = 'none';
         document.querySelector('.search-container').style.display = 'none';
         resultsContainer.style.display = 'none';
         adminPanel.style.display = 'block';
         renderInventory(); // Mirror mode in adminInventoryContainer
     } else {
+        if (mapView) mapView.style.display = 'none';
         document.querySelector('.search-container').style.display = 'none';
         adminPanel.style.display = 'none';
         resultsContainer.style.display = 'block';

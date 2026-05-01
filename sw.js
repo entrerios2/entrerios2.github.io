@@ -1,11 +1,14 @@
-const CACHE_NAME = 'av-tech-v118';
+const CACHE_NAME = 'av-tech-v119';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
+  './topology.js',
   './manifest.json',
-  'https://unpkg.com/html5-qrcode'
+  'https://unpkg.com/html5-qrcode',
+  'https://cdn.jsdelivr.net/npm/@antv/x6@3/dist/x6.min.js',
+  'https://unpkg.com/elkjs@0.8.2/lib/elk.bundled.js'
 ];
 
 self.addEventListener('install', (event) => {

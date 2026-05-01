@@ -247,7 +247,7 @@ function renderMapTopology() {
             id: edge.id,
             source: { cell: edge.source, port: edge.sourcePort },
             target: { cell: edge.target, port: edge.targetPort },
-            router: { name: 'orth', args: { padding: 35 } },
+            router: { name: 'manhattan', args: { padding: 15 } },
             connector: { name: 'rounded', args: { radius: 10 } },
             data: { type: 'collapsed', edge },
             labels: [{ attrs: {
@@ -272,7 +272,7 @@ function renderMapTopology() {
             id: conn.ID_Patch,
             source: { cell: conn.ID_Origen, port: conn.ID_Patch + '-out' },
             target: { cell: conn.ID_Destino, port: conn.ID_Patch + '-in' },
-            router: { name: 'orth', args: { padding: 35 } },
+            router: { name: 'manhattan', args: { padding: 15 } },
             connector: { name: 'rounded', args: { radius: 10 } },
             data: { type: 'direct', conn },
             attrs: { line: {
@@ -320,8 +320,8 @@ function renderMapTopology() {
             children.push({
                 id: 'ELK_LOC_' + loc,
                 layoutOptions: { 
-                    'elk.padding': '[top=60,left=30,bottom=30,right=30]',
-                    'elk.spacing.nodeNode': '60'
+                    'elk.padding': '[top=40,left=20,bottom=20,right=20]',
+                    'elk.spacing.nodeNode': '40'
                 },
                 children: nodes.map(n => ({
                     id: n.id, width: n.getSize().width, height: n.getSize().height,
@@ -375,10 +375,10 @@ function renderMapTopology() {
                 'elk.algorithm': 'layered',
                 'elk.direction': 'RIGHT',
                 'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
-                'elk.padding': '[top=100,left=100,bottom=100,right=100]',
-                'elk.spacing.componentComponent': '200',
-                'elk.spacing.nodeNode': '100',
-                'elk.layered.spacing.nodeNodeBetweenLayers': '150'
+                'elk.padding': '[top=50,left=50,bottom=50,right=50]',
+                'elk.spacing.componentComponent': '80',
+                'elk.spacing.nodeNode': '40',
+                'elk.layered.spacing.nodeNodeBetweenLayers': '100'
             },
             children,
             edges: elkEdges
@@ -481,6 +481,25 @@ function renderMapTopology() {
             if (typeof searchInput !== 'undefined') searchInput.value = node.id;
             if (typeof renderResults === 'function') renderResults(node.id); 
         }, 50);
+    });
+
+    x6Graph.on('edge:click', ({ edge }) => {
+        const d = edge.getData();
+        if (!d) return;
+        if (d.type === 'direct' && d.conn) {
+            // Open the connection modal directly
+            openConnectionModal(d.conn);
+        } else if (d.type === 'collapsed' && d.edge) {
+            // Open the cable detail view
+            document.getElementById('mapView').style.display = 'none';
+            document.getElementById('resultsContainer').style.display = 'block';
+            document.getElementById('activeModeDisplay').innerText = 'Operación';
+            if (typeof currentMode !== 'undefined') currentMode = 'OPERACION';
+            setTimeout(() => { 
+                if (typeof searchInput !== 'undefined') searchInput.value = d.edge.cableId;
+                if (typeof renderResults === 'function') renderResults(d.edge.cableId); 
+            }, 50);
+        }
     });
 
     x6Graph.on('node:port:click', ({ node, port, e }) => {
