@@ -478,7 +478,7 @@ function renderInventory() {
         contentDiv.className = 'details-content';
 
         let data = [...db[section.type]];
-        if (currentSort.type === section.type) {
+        if (currentSort.type === section.type && currentSort.column) {
             data.sort((a, b) => {
                 let valA = a[currentSort.column] || '';
                 let valB = b[currentSort.column] || '';
@@ -488,6 +488,10 @@ function renderInventory() {
                 if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
                 return 0;
             });
+        } else {
+            // Default Sort requested by USER
+            const defaultKey = section.type === 'equipos' ? 'Nombre' : (section.type === 'cables' ? 'Tipo' : 'ID_Patch');
+            data.sort((a, b) => String(a[defaultKey] || '').localeCompare(String(b[defaultKey] || ''), undefined, {numeric: true, sensitivity: 'base'}));
         }
         const currentGroup = activeGroupings[section.type];
 
@@ -1181,10 +1185,10 @@ function renderAdminTable(type) {
     currentSort.type = type;
     const data = [...db[type]];
     
-    // Default sort by ID if no column selected
-    const idKey = type === 'equipos' ? 'ID_Equipo' : (type === 'cables' ? 'ID_Cable' : 'ID_Patch');
+    // Default sort by specific keys requested by USER if no column selected
     if (!currentSort.column) {
-        data.sort((a, b) => String(a[idKey]).localeCompare(String(b[idKey])));
+        const sortKey = type === 'equipos' ? 'Nombre' : (type === 'cables' ? 'Tipo' : 'ID_Patch');
+        data.sort((a, b) => String(a[sortKey] || '').localeCompare(String(b[sortKey] || ''), undefined, {numeric: true, sensitivity: 'base'}));
     } else {
         data.sort((a, b) => {
             const valA = String(a[currentSort.column]).toLowerCase();
@@ -1813,7 +1817,11 @@ function populateDatalists() {
     for (const [id, values] of Object.entries(lists)) {
         const el = document.getElementById(id);
         if (!el) continue;
-        el.innerHTML = Array.from(values).filter(v => v).map(v => `<option value="${v}">`).join('');
+        el.innerHTML = Array.from(values)
+            .filter(v => v)
+            .sort((a, b) => String(a).localeCompare(String(b), undefined, {numeric: true, sensitivity: 'base'}))
+            .map(v => `<option value="${v}">`)
+            .join('');
     }
 }
 
