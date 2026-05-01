@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Audio y Video Circuito ER2</title>
-    <link rel="stylesheet" href="styles.css?v=71.0">
+    <link rel="stylesheet" href="styles.css?v=76.0">
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,10 +20,10 @@
     <nav class="navbar">
         <div class="nav-content">
             <button id="menuBtn" class="menu-btn"><span class="material-icons">menu</span></button>
-            <h1 class="nav-title" id="activeModeDisplay">Armado</h1>
+            <h1 class="nav-title" id="activeModeDisplay">Cargando...</h1>
             <div style="display:flex; gap: 0.5rem; margin-left: auto;">
                 <span class="material-icons" id="offlineIcon" style="display:none; color: var(--danger); line-height: inherit; align-self: center;" title="Sin Conexión">cloud_off</span>
-                <button class="icon-btn" id="refreshBtn" title="Actualizar Base de Datos" onclick="refreshDatabase()"><span class="material-icons">sync</span></button>
+                <button class="icon-btn" id="refreshBtn" title="Actualizar base de datos" onclick="refreshDatabase()"><span class="material-icons">sync</span></button>
                 <button class="qr-btn" id="qrStartBtn" title="Escanear QR" style="width:auto; padding:0.4rem; border-radius:8px;"><span class="material-icons">qr_code_scanner</span></button>
                 <button class="qr-btn" id="searchToggleBtn" title="Buscar" style="width:auto; padding:0.4rem; border-radius:8px;"><span class="material-icons">search</span></button>
             </div>
@@ -55,7 +55,7 @@
     <div id="qrModal" class="modal-overlay" style="display:none; z-index: 3000;">
         <div style="max-width: 500px; width: 100%; padding: 1.5rem; background: #1a1a1a; border: 1px solid var(--accent-cyan); border-radius: 16px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
-                <h3 style="margin:0; color:var(--accent-cyan);">Escanear Código QR</h3>
+                <h3 style="margin:0; color:var(--accent-cyan);">Escanear código QR</h3>
                 <button id="closeQrBtn" class="close-btn" style="position:static;"><span class="material-icons">close</span></button>
             </div>
             <div id="reader" style="width:100%; min-height: 300px; background: #000; border-radius: 12px;"></div>
@@ -114,55 +114,165 @@
         <datalist id="list_seniales"></datalist>
         <datalist id="list_puertos"></datalist>
 
-        <form id="formEquipo" class="admin-tab-content">
+        <form id="formEquipo" class="form-body-ficha">
             <input type="hidden" name="isEdit" value="false">
-            <div class="form-group"><label>ID del Equipo</label><input type="text" name="id" id="equip_id" placeholder="ej: XR-01" required></div>
-            <div class="form-group"><label>Nombre / Modelo</label><input type="text" name="nombre" id="equip_nombre" placeholder="ej: Consola XR12" required></div>
-            <div class="form-group"><label>Categoría</label><input type="text" name="categoria" id="equip_cat" list="list_categorias" placeholder="ej: Audio"></div>
-            <div class="form-group"><label>Ubicación de Uso</label><input type="text" name="ubicacion" list="list_ubicaciones" placeholder="ej: FOH"></div>
-            <div class="form-group"><label>Propietario</label><input type="text" name="propietario" list="list_propietarios" placeholder="ej: Propio"></div>
-            <div class="form-group"><label>Contenedor (Lugar de guardado)</label><input type="text" name="contenedor" list="list_lugares" placeholder="ej: Rack 1"></div>
-            <div class="form-group" style="grid-column: 1 / -1;"><label>Notas</label><input type="text" name="notas" placeholder="Observaciones adicionales"></div>
-            <button type="submit" id="btnSubmitEquipo" class="action-btn btn-primary">Guardar Equipo</button>
+            <div class="form-group">
+                <label><span class="material-icons">qr_code</span> ID del equipo</label>
+                <input type="text" name="id" id="equip_id" placeholder="ej: XR-01" required>
+            </div>
+            <div class="form-group">
+                <label><span class="material-icons">label</span> Nombre / modelo</label>
+                <input type="text" name="nombre" id="equip_nombre" placeholder="ej: Consola XR12" required>
+            </div>
+            <div class="form-group">
+                <label><span class="material-icons">category</span> Categoría</label>
+                <input type="text" name="categoria" id="equip_cat" list="list_categorias" placeholder="ej: Audio">
+            </div>
+            <div class="form-group">
+                <label><span class="material-icons">location_on</span> Ubicación de uso</label>
+                <input type="text" name="ubicacion" list="list_ubicaciones" placeholder="ej: FOH">
+            </div>
+            <div class="form-group">
+                <label><span class="material-icons">person</span> Propietario</label>
+                <input type="text" name="propietario" list="list_propietarios" placeholder="ej: Propio">
+            </div>
+            <div class="form-group">
+                <label><span class="material-icons">inventory_2</span> Contenedor (lugar de guardado)</label>
+                <input type="text" name="contenedor" list="list_lugares" placeholder="ej: Rack 1">
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label><span class="material-icons">notes</span> Notas</label>
+                <input type="text" name="notas" placeholder="Observaciones adicionales">
+            </div>
+            <button type="submit" id="btnSubmitEquipo" class="action-btn btn-primary">Guardar equipo</button>
         </form>
 
-        <form id="formCable" class="admin-tab-content">
+        <form id="formCable" class="form-body-ficha">
             <input type="hidden" name="isEdit" value="false">
-            <div class="form-group"><label>ID del Cable</label><input type="text" name="id" id="cable_id" placeholder="ej: CBL-001" required></div>
-            <div class="form-group"><label>Tipo de Conector</label><input type="text" name="tipo" id="cable_tipo" list="list_conectores" placeholder="ej: XLR M-F"></div>
-            <div class="form-group"><label>Longitud (m)</label><input type="number" name="largo" placeholder="ej: 10"></div>
-            <div class="form-group"><label>Categoría</label><input type="text" name="categoria" list="list_categorias" placeholder="ej: Cables Audio"></div>
-            <div class="form-group"><label>Ubicación</label><input type="text" name="ubicacion" list="list_ubicaciones" placeholder="ej: Escenario"></div>
-            <div class="form-group"><label>Propietario</label><input type="text" name="propietario" list="list_propietarios" placeholder="Propietario"></div>
-            <div class="form-group"><label>Contenedor</label><input type="text" name="contenedor" list="list_lugares" placeholder="Contenedor"></div>
-            <div class="form-group" style="grid-column: 1 / -1;"><label>Notas</label><input type="text" name="notas" placeholder="Observaciones"></div>
-            <button type="submit" id="btnSubmitCable" class="action-btn btn-primary">Guardar Cable</button>
+            <div class="form-group">
+                <label><span class="material-icons">qr_code</span> ID del cable</label>
+                <input type="text" name="id" id="cable_id" placeholder="ej: CBL-001" required>
+            </div>
+            <div class="form-group">
+                <label><span class="material-icons">cable</span> Tipo de conector</label>
+                <input type="text" name="tipo" id="cable_tipo" list="list_conectores" placeholder="ej: XLR M-F">
+            </div>
+            <div class="form-group">
+                <label><span class="material-icons">straighten</span> Longitud (m)</label>
+                <input type="number" name="largo" placeholder="ej: 10">
+            </div>
+            <div class="form-group">
+                <label><span class="material-icons">category</span> Categoría</label>
+                <input type="text" name="categoria" list="list_categorias" placeholder="ej: Cables audio">
+            </div>
+            <div class="form-group">
+                <label><span class="material-icons">location_on</span> Ubicación</label>
+                <input type="text" name="ubicacion" list="list_ubicaciones" placeholder="ej: Escenario">
+            </div>
+            <div class="form-group">
+                <label><span class="material-icons">person</span> Propietario</label>
+                <input type="text" name="propietario" list="list_propietarios" placeholder="Propietario">
+            </div>
+            <div class="form-group">
+                <label><span class="material-icons">inventory_2</span> Contenedor</label>
+                <input type="text" name="contenedor" list="list_lugares" placeholder="Contenedor">
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label><span class="material-icons">notes</span> Notas</label>
+                <input type="text" name="notas" placeholder="Observaciones">
+            </div>
+            <button type="submit" id="btnSubmitCable" class="action-btn btn-primary">Guardar cable</button>
         </form>
 
-        <form id="formRuteo" class="admin-tab-content">
+        <form id="formRuteo" class="form-body-ficha">
             <input type="hidden" name="isEdit" value="false">
-            <div class="form-group"><label>ID Patch</label><input type="text" name="id_patch" placeholder="ej: 001" required></div>
-            <div class="form-group"><label>Equipo Origen</label><select name="id_origen" id="selectOrigen" required><option value="">-- Seleccionar --</option></select></div>
-            <div class="form-group"><label>Puerto Origen</label><input type="text" name="puerto_origen" list="list_puertos" placeholder="ej: XLR"></div>
-            <div class="form-group"><label>Equipo Destino</label><select name="id_destino" id="selectDestino" required><option value="">-- Seleccionar --</option></select></div>
-            <div class="form-group"><label>Puerto Destino</label><input type="text" name="puerto_destino" list="list_puertos" placeholder="ej: Input 1"></div>
-            <div class="form-group"><label>Tipo de Señal</label><input type="text" name="tipo_senial" list="list_seniales" placeholder="ej: Audio"></div>
-            <div class="form-group" style="grid-column: 1 / -1;"><label>Notas</label><textarea name="notas" placeholder="Notas de la conexión" style="width:100%; min-height:60px; background:rgba(255,255,255,0.05); border:1px solid #444; border-radius:8px; color:white; padding:8px;"></textarea></div>
-            <button type="submit" id="btnSubmitRuteo" class="action-btn btn-primary" style="grid-column: 1 / -1;">Guardar Conexión</button>
+            
+            <div class="form-group">
+                <label><span class="material-icons">settings_input_component</span> Equipo principal</label>
+                <div class="advanced-selector-trigger" onclick="openSelector('main')">
+                    <span id="main_selector_label">Seleccionar equipo...</span>
+                    <input type="hidden" name="id_principal" id="main_id_input" required>
+                    <span class="material-icons">search</span>
+                </div>
+            </div>
+
+            <div class="patch-section" id="section_entradas">
+                <div class="patch-section-title">
+                    <span>Entradas</span>
+                    <button type="button" class="icon-btn" onclick="addPatchRow('entradas')" title="Agregar entrada"><span class="material-icons">add_circle</span></button>
+                </div>
+                <div id="container_entradas"></div>
+            </div>
+
+            <div class="patch-section" id="section_salidas">
+                <div class="patch-section-title">
+                    <span>Salidas</span>
+                    <button type="button" class="icon-btn" onclick="addPatchRow('salidas')" title="Agregar salida"><span class="material-icons">add_circle</span></button>
+                </div>
+                <div id="container_salidas"></div>
+            </div>
+
+            <button type="submit" id="btnSubmitRuteo" class="action-btn btn-primary" style="margin-top: 1rem;">Guardar todas las conexiones</button>
         </form>
+
+        <!-- Template para filas de multi-patching -->
+        <template id="patchRowTemplate">
+            <div class="patch-block">
+                <div class="form-group">
+                    <div class="advanced-selector-trigger" onclick="openSelector(this)">
+                        <span class="sel-label">Seleccionar equipo...</span>
+                        <input type="hidden" class="sel-id">
+                        <span class="material-icons">search</span>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.8rem;">
+                    <div class="form-group" style="position:relative; z-index:5;">
+                        <label>Puerto origen</label>
+                        <input type="text" class="p-ori" list="list_puertos">
+                    </div>
+                    <div class="form-group" style="position:relative; z-index:5;">
+                        <label>Puerto destino</label>
+                        <input type="text" class="p-des" list="list_puertos">
+                    </div>
+                </div>
+                <div class="visual-patch-line">
+                    <input type="text" class="p-signal" placeholder="Tipo de señal" list="list_seniales">
+                </div>
+                <div class="patch-expand-btn" onclick="togglePatchExtra(this)">
+                    <span class="material-icons">expand_more</span>
+                </div>
+                <div class="patch-hidden-zone">
+                    <div class="form-group">
+                        <label>ID patch (opcional)</label>
+                        <input type="text" class="p-id" placeholder="Auto">
+                    </div>
+                    <div class="form-group">
+                        <label>Notas</label>
+                        <textarea class="p-notes" placeholder="Notas..."></textarea>
+                    </div>
+                    <button type="button" class="delete-patch-btn" onclick="this.closest('.patch-block').remove()" title="Eliminar fila">
+                        <span class="material-icons">delete</span>
+                    </button>
+                </div>
+            </div>
+        </template>
     </div>
 
     <!-- Setup Modal -->
     <style>
+    @media print {
+        @page { size: auto; margin: 10mm; }
+        body { -webkit-print-color-adjust: exact; }
+    }
     .setup-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
     .setup-content { max-width: 400px; margin: 0 auto; width: 100%; background: #1e1e1e; padding: 1.5rem; border-radius: 12px; border: 1px solid #333;}
     </style>
     <div id="setupModal" class="setup-modal" style="display: none;">
         <div class="setup-content">
-            <h3 style="margin-top:0">Conectar Base de Datos</h3>
+            <h3 style="margin-top:0">Conectar base de datos</h3>
             <p style="font-size: 0.9rem; margin-bottom: 1rem; color:#aaa;">Ingresá el ID de tu Google Apps Script o la URL completa:</p>
             <input type="text" id="gasIdInput" placeholder="AKfycb..." style="width:100%; padding: 0.8rem; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: #fff; margin-bottom: 1rem;">
-            <button id="saveGasIdBtn" class="mode-btn active" style="width:100%; padding: 0.8rem; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Guardar e Iniciar</button>
+            <button id="saveGasIdBtn" class="mode-btn active" style="width:100%; padding: 0.8rem; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Guardar e iniciar</button>
         </div>
     </div>
 
@@ -170,7 +280,7 @@
     <div id="printPreviewModal" class="modal-overlay" style="display:none; z-index: 4000;">
         <div class="modal-content glass" style="max-width: 90vw; width: auto; max-height: 90vh; overflow-y: auto;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
-                <h3 style="margin:0; color:var(--accent-cyan);">Vista Previa de Etiquetas</h3>
+                <h3 style="margin:0; color:var(--accent-cyan);">Vista previa de etiquetas</h3>
                 <button onclick="document.getElementById('printPreviewModal').style.display='none'" class="close-btn" style="position:static;"><span class="material-icons">close</span></button>
             </div>
             <div id="previewContainer" style="background:#fff; padding: 20px; border-radius: 8px; color: #000; overflow-x: auto;">
@@ -180,7 +290,7 @@
                 <span class="material-icons" style="font-size:1rem; vertical-align:middle;">info</span> Asegurate de imprimir a escala 100%
             </p>
             <div style="display:flex; gap:10px; margin-top:1rem;">
-                <button id="confirmPrintBtn" class="action-btn btn-primary" style="flex:1">Imprimir Ahora</button>
+                <button id="confirmPrintBtn" class="action-btn btn-primary" style="flex:1">Imprimir ahora</button>
                 <button onclick="document.getElementById('printPreviewModal').style.display='none'" class="action-btn" style="flex:1; background:rgba(255,255,255,0.1)">Cerrar</button>
             </div>
         </div>
@@ -191,7 +301,7 @@
 
     <!-- Floating Mode Toggle REMOVED -->
 
-    <script src="app.js?v=71.0"></script>
+    <script src="app.js?v=88.0"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

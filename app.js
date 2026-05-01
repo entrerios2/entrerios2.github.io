@@ -155,14 +155,14 @@ async function fetchData() {
 
     try {
         const response = await fetch(API_URL);
-        if (!response.ok) throw new Error('API Error');
+        if (!response.ok) throw new Error('API error');
         const data = await response.json();
         db = data;
         localStorage.setItem('av_tech_db', JSON.stringify(db));
-        console.log('DB Updated from server');
+        console.log('Base de datos actualizada');
         applyConfig();
     } catch (error) {
-        console.warn('Could not fetch fresh data, using local cache', error);
+        console.warn('No se pudo obtener datos frescos, usando caché local', error);
         applyConfig();
     }
 }
@@ -453,7 +453,7 @@ function renderInventory() {
                 <h3 style="margin:0; font-size:1.1rem;"><span class="material-icons" style="vertical-align:middle; margin-right:5px;">${section.icon}</span> ${section.title}</h3>
                 <div class="grouping-capsule" onclick="event.stopPropagation()">
                     <span class="material-icons">layers</span>
-                    <select class="premium-select" onchange="setGrouping('${section.type}', this.value)">
+                    <select class="premium-select-form" onchange="setGrouping('${section.type}', this.value)" style="padding: 4px 25px 4px 10px !important; font-size: 0.8rem !important; width: auto !important; height: auto !important; border-radius: 6px !important;">
                         ${section.groups.map(g => `<option value="${g.val}" ${activeGroupings[section.type] === g.val ? 'selected' : ''}>${g.label}</option>`).join('')}
                     </select>
                 </div>
@@ -502,7 +502,15 @@ function renderInventory() {
                 const subDetails = document.createElement('details');
                 subDetails.className = 'premium-details';
                 subDetails.innerHTML = `
-                    <summary><span class="material-icons chevron">expand_more</span> ${key} <span class="badge-count">${items.length}</span></summary>
+                    <summary style="display:flex; align-items:center;">
+                        <span class="material-icons chevron">expand_more</span> 
+                        <span style="flex:1">${key} <span class="badge-count">${items.length}</span></span>
+                        ${currentMode === 'ADMIN' && section.type !== 'conexiones' ? `
+                            <button class="print-btn-main" onclick="event.stopPropagation(); preparePrintLabels('${section.type}', '${currentGroup}', '${key}')" title="Imprimir este grupo" style="opacity: 0.7; pointer-events: auto; transform: none; margin-right: 10px; width: 28px; height: 28px;">
+                                <span class="material-icons" style="font-size: 1rem;">print</span>
+                            </button>
+                        ` : ''}
+                    </summary>
                     <div class="details-content">
                         ${renderTableHTML(items)}
                     </div>
@@ -644,7 +652,7 @@ function renderTree(centralId, shouldScroll = false) {
         const btn = document.createElement('button');
         btn.className = 'expand-tree-btn';
         btn.innerHTML = '<span class="material-icons">keyboard_double_arrow_up</span>';
-        btn.title = "Expandir Origen";
+        btn.title = "Expandir origen";
         btn.onclick = () => { treeMaxDepth++; renderTree(centralId, false); };
         container.appendChild(btn);
     }
@@ -673,7 +681,7 @@ function renderTree(centralId, shouldScroll = false) {
         const btn = document.createElement('button');
         btn.className = 'expand-tree-btn';
         btn.innerHTML = '<span class="material-icons">keyboard_double_arrow_down</span>';
-        btn.title = "Expandir Destino";
+        btn.title = "Expandir destino";
         btn.onclick = () => { treeMaxDepth++; renderTree(centralId, false); };
         container.appendChild(btn);
     }
@@ -769,7 +777,7 @@ function renderTreeNode(id, isCentral, fixedInputConn = null, fixedOutputConn = 
             <button class="close-ficha-btn" onclick="clearSearch()" title="Cerrar"><span class="material-icons">close</span></button>
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; padding-right:40px;">
                 <span class="material-icons" style="color:var(--accent-cyan); font-size:1.5rem;">${isCable ? 'cable' : 'speaker'}</span>
-                <h2 style="margin:0; font-size:1.2rem; line-height:1.2">${info?.Nombre || info?.Tipo || 'Sin Nombre'}</h2>
+                <h2 style="margin:0; font-size:1.2rem; line-height:1.2">${info?.Nombre || info?.Tipo || 'Sin nombre'}</h2>
                 <span class="badge-id" style="font-size:0.75rem; padding:0.3rem 0.6rem;">${id}</span>
             </div>
             
@@ -811,7 +819,7 @@ function renderTreeNode(id, isCentral, fixedInputConn = null, fixedOutputConn = 
                         <div class="details-content notes-list">
                             <div class="add-note-box">
                                 <textarea id="note_input_${id}" placeholder="Escribe una nota..."></textarea>
-                                <button class="action-btn btn-primary btn-mini" onclick="addNote('${id}')">Agregar Nota</button>
+                                <button class="action-btn btn-primary btn-mini" onclick="addNote('${id}')">Agregar nota</button>
                             </div>
                             ${meta.notas.slice().reverse().map(n => `
                                 <div class="trace-entry">
@@ -955,15 +963,15 @@ function showConnectionModal(idPatch) {
             
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; padding-right:30px;">
                 <span class="material-icons" style="color:var(--accent-cyan); font-size:1.5rem;">settings_input_component</span>
-                <h2 style="margin:0; font-size:1.1rem; line-height:1.2">Detalles de Conexión</h2>
+                <h2 style="margin:0; font-size:1.1rem; line-height:1.2">Detalles de conexión</h2>
                 <span class="badge-id" style="font-size:0.75rem; padding:0.3rem 0.6rem;">${idPatch}</span>
             </div>
 
             <div class="compact-meta" style="margin-bottom:1rem">
-                <div class="meta-pill" title="Ver Origen" style="cursor:pointer" onclick="this.closest('.modal-overlay').remove(); renderResults('${conn.ID_Origen}')">
+                <div class="meta-pill" title="Ver origen" style="cursor:pointer" onclick="this.closest('.modal-overlay').remove(); renderResults('${conn.ID_Origen}')">
                     <span class="material-icons" style="font-size:0.9rem">login</span> ${conn.ID_Origen} (${conn.Puerto_Origen})
                 </div>
-                <div class="meta-pill" title="Ver Destino" style="cursor:pointer" onclick="this.closest('.modal-overlay').remove(); renderResults('${conn.ID_Destino}')">
+                <div class="meta-pill" title="Ver destino" style="cursor:pointer" onclick="this.closest('.modal-overlay').remove(); renderResults('${conn.ID_Destino}')">
                     <span class="material-icons" style="font-size:0.9rem">logout</span> ${conn.ID_Destino} (${conn.Puerto_Destino})
                 </div>
                 <div class="meta-pill" title="Señal"><span class="material-icons" style="font-size:0.9rem">wifi_tethering</span> ${conn.Tipo_Senial}</div>
@@ -991,7 +999,7 @@ function showConnectionModal(idPatch) {
                 <div class="details-content notes-list">
                     <div class="add-note-box">
                         <textarea id="conn_note_input_${idPatch}" placeholder="Escribe una nota..."></textarea>
-                        <button class="action-btn btn-primary btn-mini" onclick="addConnectionNote('${idPatch}')">Agregar Nota</button>
+                        <button class="action-btn btn-primary btn-mini" onclick="addConnectionNote('${idPatch}')">Agregar nota</button>
                     </div>
                     ${meta.notas.slice().reverse().map(n => `
                         <div class="trace-entry">
@@ -1146,11 +1154,17 @@ function renderAdminTable(type) {
     adminTableBody.innerHTML = data.map(row => `
         <tr>
             ${headers[type].map(h => `<td>${row[h] || '-'}</td>`).join('')}
-            <td>
+            <td style="white-space: nowrap;">
                 <button class="action-btn btn-warning" style="padding:4px 8px; font-size:0.7rem" 
-                        onclick="editItem('${type}', '${row[headers[type][0]]}')">
+                        onclick="editItem('${type}', '${row[headers[type][0]]}')" title="Editar">
                     <span class="material-icons" style="font-size:1rem">edit</span>
                 </button>
+                ${type !== 'conexiones' ? `
+                <button class="action-btn" style="padding:4px 8px; font-size:0.7rem; background:var(--accent-purple); color:white; border:none;" 
+                        onclick="openBatchPatch('${type}', '${row[headers[type][0]]}')" title="Ruteo">
+                    <span class="material-icons" style="font-size:1rem">cable</span>
+                </button>
+                ` : ''}
             </td>
         </tr>
     `).join('');
@@ -1186,13 +1200,25 @@ function toggleAdminForm(type) {
     // Reset to "New" mode
     form.querySelector('[name="isEdit"]').value = 'false';
     const submitBtn = form.querySelector('button[type="submit"]');
-    submitBtn.innerText = "Guardar Nuevo";
+    submitBtn.innerText = "Guardar nuevo";
     
-    formContainerInner.innerHTML = '';
+    formContainerInner.innerHTML = `
+        <div class="form-header-ficha">
+            <h2>${type === 'equipos' ? 'Nuevo equipo' : (type === 'cables' ? 'Nuevo cable' : 'Nueva conexión')}</h2>
+        </div>
+    `;
     formContainerInner.appendChild(form);
     document.getElementById('adminModal').style.display = 'flex';
     
-    // Attach Auto-ID listeners to the CLONED form elements
+    // Limpiar campos específicos del ruteo multi-patch
+    if (type === 'conexiones') {
+        form.querySelector('#main_id_input').value = '';
+        form.querySelector('#main_selector_label').innerText = 'Seleccionar equipo...';
+        form.querySelector('#container_entradas').innerHTML = '';
+        form.querySelector('#container_salidas').innerHTML = '';
+    }
+
+    // Re-vincular listeners de Auto-ID
     if (type === 'equipos') {
         const catIn = form.querySelector('[name="categoria"]');
         const ubiIn = form.querySelector('[name="ubicacion"]');
@@ -1201,11 +1227,9 @@ function toggleAdminForm(type) {
     } else if (type === 'cables') {
         const tipIn = form.querySelector('[name="tipo"]');
         tipIn?.addEventListener('input', () => autoGenerateId('cable', form));
-    } else if (type === 'conexiones') {
-        const oriIn = form.querySelector('[name="id_origen"]');
-        const desIn = form.querySelector('[name="id_destino"]');
-        [oriIn, desIn].forEach(el => el?.addEventListener('change', () => autoGenerateId('conexion', form)));
     }
+
+    // Attach Auto-ID listeners...
 
     // Re-attach listener
     form.addEventListener('submit', (e) => handleFormSubmit(e, formId));
@@ -1288,6 +1312,72 @@ async function handleFormSubmit(e, formId) {
     const submitBtn = form.querySelector('button[type="submit"]');
     const originalBtnHTML = submitBtn.innerHTML;
 
+    if (formId === 'formRuteo') {
+        const mainId = form.querySelector('#main_id_input').value;
+        const isEdit = form.querySelector('[name="isEdit"]').value === 'true';
+
+        if (!mainId) { alert("Selecciona el equipo principal"); return; }
+        
+        const inputs = Array.from(form.querySelectorAll('#container_entradas .patch-block'));
+        const outputs = Array.from(form.querySelectorAll('#container_salidas .patch-block'));
+        
+        if (inputs.length === 0 && outputs.length === 0) {
+            alert("Agrega al menos una conexión");
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner spinner-sm"></span> Guardando...';
+
+        try {
+            // Entradas
+            for (const block of inputs) {
+                const secId = block.querySelector('.sel-id').value;
+                if (!secId) continue;
+                const payload = {
+                    id_patch: block.querySelector('.p-id').value || `${secId}/${mainId}`,
+                    id_origen: secId,
+                    puerto_origen: block.querySelector('.p-ori').value,
+                    id_destino: mainId,
+                    puerto_destino: block.querySelector('.p-des').value,
+                    tipo_senial: block.querySelector('.p-signal').value,
+                    notas: block.querySelector('.p-notes').value,
+                    estado: 'Desconectado',
+                    isEdit: isEdit ? 'true' : 'false'
+                };
+                await handleAction(isEdit ? 'EDIT_CONEXION' : 'ADD_CONEXION', payload);
+            }
+            // Salidas
+            for (const block of outputs) {
+                const secId = block.querySelector('.sel-id').value;
+                if (!secId) continue;
+                const payload = {
+                    id_patch: block.querySelector('.p-id').value || `${mainId}/${secId}`,
+                    id_origen: mainId,
+                    puerto_origen: block.querySelector('.p-ori').value,
+                    id_destino: secId,
+                    puerto_destino: block.querySelector('.p-des').value,
+                    tipo_senial: block.querySelector('.p-signal').value,
+                    notas: block.querySelector('.p-notes').value,
+                    estado: 'Desconectado',
+                    isEdit: isEdit ? 'true' : 'false'
+                };
+                await handleAction(isEdit ? 'EDIT_CONEXION' : 'ADD_CONEXION', payload);
+            }
+            alert("Cambios guardados con éxito");
+            closeAdminModal();
+            fetchData();
+            return;
+        } catch (err) {
+            console.error("Error en ruteo por lotes:", err);
+            alert("Ocurrió un error al guardar.");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnHTML;
+        }
+        return;
+    }
+
     const formData = new FormData(form);
     const body = Object.fromEntries(formData.entries());
     const isEdit = body.isEdit === 'true';
@@ -1301,21 +1391,6 @@ async function handleFormSubmit(e, formId) {
         action = isEdit ? 'EDIT_CABLE' : 'ADD_CABLE';
         if (!isEdit && !body.estado) body.estado = 'Guardado';
     }
-    if (formId === 'formRuteo') {
-        action = isEdit ? 'EDIT_CONEXION' : 'ADD_CONEXION';
-        if (!isEdit) {
-            if (!body.estado) body.estado = 'Desconectado';
-            // Generación automática de ID: [Origen]/[Destino]
-            let baseId = `${body.id_origen}/${body.id_destino}`;
-            let finalId = baseId;
-            let counter = 1;
-            while (db.conexiones.some(c => c.ID_Patch === finalId)) {
-                finalId = `${baseId}${counter}`;
-                counter++;
-            }
-            body.id_patch = finalId;
-        }
-    }
 
     submitBtn.disabled = true;
     submitBtn.innerHTML = `<span class="spinner spinner-sm spinner-btn"></span> Guardando...`;
@@ -1324,13 +1399,11 @@ async function handleFormSubmit(e, formId) {
         const success = await handleAction(action, body);
         if (success) {
             closeAdminModal();
-            renderInventory(); // Refresh view
-            populateDatalists();
+            fetchData();
         }
     } catch (e) {
-        console.error("Submit failed:", e);
-        alert("Error al guardar. Se intentará sincronizar luego.");
-        closeAdminModal();
+        console.error("Error al guardar:", e);
+        alert("No se pudo completar la operación.");
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnHTML;
@@ -1506,9 +1579,12 @@ function autoGenerateId(formType, formEl) {
         const tip = formEl.querySelector('[name="tipo"]')?.value.trim().toUpperCase().replace(/\s+/g, '-');
         if (tip) prefix = `C-${tip}`;
     } else if (formType === 'conexion') {
-        const ori = formEl.querySelector('[name="id_origen"]')?.value;
-        const des = formEl.querySelector('[name="id_destino"]')?.value;
-        if (ori && des) prefix = `${ori}/${des}`;
+        const ori = formEl.querySelector('[name="id_principal"]')?.value;
+        // Si no hay id_principal, intentamos con los campos antiguos (para compatibilidad)
+        const oldOri = formEl.querySelector('[name="id_origen"]')?.value;
+        const oldDes = formEl.querySelector('[name="id_destino"]')?.value;
+        if (ori) prefix = ori; // El prefijo base es el equipo principal
+        else if (oldOri && oldDes) prefix = `${oldOri}/${oldDes}`;
     }
 
     if (!prefix) return;
@@ -1724,14 +1800,17 @@ function updateOfflineStatus() {
 }
 
 // Label Generation & Printing
-async function preparePrintLabels(type) {
+async function preparePrintLabels(type, filterKey = null, filterVal = null) {
     const previewModal = document.getElementById('printPreviewModal');
     const container = document.getElementById('previewContainer');
     container.innerHTML = '<div style="text-align:center; padding:20px;">Generando etiquetas...</div>';
     previewModal.style.display = 'flex';
 
-    // Get visible items based on current search/filter (if any) or just all
-    const data = db[type];
+    // Get items based on filter if provided
+    let data = db[type];
+    if (filterKey && filterVal !== null) {
+        data = data.filter(item => (String(item[filterKey] || 'Sin Asignar')) === String(filterVal));
+    }
     
     setTimeout(async () => {
         container.innerHTML = '';
@@ -1826,5 +1905,218 @@ window.addEventListener('afterprint', () => {
     document.getElementById('printArea').innerHTML = '';
 });
 
-// Start
+
+// --- Lógica de Administración (PROMPT 18) ---
+
+let currentSelectorTarget = null;
+
+/**
+ * Abre el selector avanzado de equipos/cables
+ * @param {string|HTMLElement} target 'main' o el bloque de conexión secundaria
+ */
+function openSelector(target) {
+    currentSelectorTarget = target;
+    
+    // Crear el modal si no existe
+    let modal = document.getElementById('selectorModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.className = 'selector-modal';
+        modal.id = 'selectorModal';
+        document.body.appendChild(modal);
+    }
+
+    // Poblar filtros únicos
+    const cats = new Set([...db.equipos, ...db.cables].map(i => i.Categoria).filter(Boolean));
+    const tips = new Set([...db.equipos, ...db.cables].map(i => i.Tipo || i.Nombre).filter(Boolean));
+    const ubis = new Set([...db.equipos, ...db.cables].map(i => i.Ubicacion).filter(Boolean));
+
+    modal.innerHTML = `
+        <div class="selector-content">
+            <div class="form-header-ficha">
+                <h2>Seleccionar equipo o cable</h2>
+                <button class="icon-btn" onclick="closeSelector()"><span class="material-icons">close</span></button>
+            </div>
+            <div class="selector-filters">
+                <input type="text" id="selectorSearch" placeholder="Buscar por ID o nombre..." 
+                       style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:8px; color:white;">
+                <div class="filter-row">
+                    <select id="selFilterCat" class="premium-select" style="font-size:0.8rem">
+                        <option value="">Categoría...</option>
+                        ${Array.from(cats).sort().map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                    <select id="selFilterTip" class="premium-select" style="font-size:0.8rem">
+                        <option value="">Tipo...</option>
+                        ${Array.from(tips).sort().map(t => `<option value="${t}">${t}</option>`).join('')}
+                    </select>
+                    <select id="selFilterUbi" class="premium-select" style="font-size:0.8rem">
+                        <option value="">Ubicación...</option>
+                        ${Array.from(ubis).sort().map(u => `<option value="${u}">${u}</option>`).join('')}
+                    </select>
+                </div>
+            </div>
+            <div class="selector-results" id="selectorResults"></div>
+        </div>
+    `;
+    
+    modal.style.display = 'flex';
+    
+    const searchIn = document.getElementById('selectorSearch');
+    searchIn.focus();
+    searchIn.addEventListener('input', updateSelectorResults);
+    document.getElementById('selFilterCat').addEventListener('change', updateSelectorResults);
+    document.getElementById('selFilterTip').addEventListener('change', updateSelectorResults);
+    document.getElementById('selFilterUbi').addEventListener('change', updateSelectorResults);
+
+    updateSelectorResults();
+}
+
+function closeSelector() {
+    const modal = document.getElementById('selectorModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function updateSelectorResults() {
+    const query = document.getElementById('selectorSearch').value.toLowerCase();
+    const fCat = document.getElementById('selFilterCat').value;
+    const fTip = document.getElementById('selFilterTip').value;
+    const fUbi = document.getElementById('selFilterUbi').value;
+    
+    const results = [...db.equipos, ...db.cables]
+        .filter(i => {
+            const id = (i.ID_Equipo || i.ID_Cable || '').toLowerCase();
+            const name = (i.Nombre || i.Tipo || '').toLowerCase();
+            const matchesQuery = id.includes(query) || name.includes(query);
+            const matchesCat = !fCat || i.Categoria === fCat;
+            const matchesTip = !fTip || (i.Tipo === fTip || i.Nombre === fTip);
+            const matchesUbi = !fUbi || i.Ubicacion === fUbi;
+            return matchesQuery && matchesCat && matchesTip && matchesUbi;
+        })
+        .sort((a, b) => {
+            const idA = a.ID_Equipo || a.ID_Cable || '';
+            const idB = b.ID_Equipo || b.ID_Cable || '';
+            return idA.localeCompare(idB);
+        });
+
+    const container = document.getElementById('selectorResults');
+    container.innerHTML = results.length > 0 ? results.map(i => {
+        const id = i.ID_Equipo || i.ID_Cable;
+        const name = i.Nombre || i.Tipo || '';
+        const icon = i.ID_Cable ? 'cable' : 'speaker';
+        
+        return `
+            <div class="selector-item" data-id="${id}" data-name="${name}" onclick="selectItemFromEl(this)">
+                <div class="item-id"><span class="material-icons" style="font-size:0.9rem; vertical-align:middle;">${icon}</span> ${id}</div>
+                <div class="item-main">${name}</div>
+                <div class="item-meta">${i.Categoria || '-'} | ${i.Ubicacion || '-'}</div>
+            </div>
+        `;
+    }).join('') : '<div style="padding:20px; text-align:center; color:var(--text-secondary)">No hay resultados</div>';
+}
+
+function selectItemFromEl(el) {
+    selectItem(el.dataset.id, el.dataset.name);
+}
+
+function selectItem(id, name) {
+    if (currentSelectorTarget === 'main') {
+        const input = document.getElementById('main_id_input');
+        if (input) {
+            input.value = id;
+            input.dispatchEvent(new Event('input')); // Disparar auto-ID si corresponde
+        }
+        const label = document.getElementById('main_selector_label');
+        if (label) label.innerText = `${id} (${name})`;
+        
+        // Trigger auto-ID for connections if in ruteo form
+        const form = document.getElementById('activeAdminForm');
+        if (form && form.id === 'activeAdminForm') { // Ya está como activeAdminForm
+            // Actualizar todos los bloques vacíos de ID patch
+            form.querySelectorAll('.patch-block').forEach(block => {
+                updatePatchBlockId(block);
+            });
+        }
+    } else {
+        const trigger = currentSelectorTarget;
+        const input = trigger.querySelector('.sel-id');
+        if (input) input.value = id;
+        const label = trigger.querySelector('.sel-label');
+        if (label) label.innerText = `${id} (${name})`;
+        
+        // Trigger auto-ID for this specific block
+        const block = trigger.closest('.patch-block');
+        if (block) updatePatchBlockId(block);
+    }
+    closeSelector();
+}
+
+function updatePatchBlockId(block) {
+    const mainId = document.getElementById('main_id_input')?.value;
+    const secId = block.querySelector('.sel-id')?.value;
+    const idInput = block.querySelector('.p-id');
+    
+    if (mainId && secId && idInput && (!idInput.value || idInput.dataset.auto !== 'false')) {
+        const isInput = block.closest('#section_entradas');
+        const baseId = isInput ? `${secId}/${mainId}` : `${mainId}/${secId}`;
+        
+        // Buscar duplicados locales y en DB
+        let finalId = baseId;
+        let counter = 1;
+        const allPatchIds = [...db.conexiones.map(c => c.ID_Patch), ...Array.from(document.querySelectorAll('.p-id')).map(el => el.value).filter(v => v && v !== idInput.value)];
+        
+        while (allPatchIds.includes(finalId)) {
+            finalId = `${baseId}-${counter}`;
+            counter++;
+        }
+        idInput.value = finalId;
+        idInput.dataset.auto = 'true';
+        
+        // Listener para detectar si el usuario escribe manualmente
+        if (!idInput.oninput) {
+            idInput.oninput = () => idInput.dataset.auto = 'false';
+        }
+    }
+}
+
+/**
+ * Agrega una fila de conexión dinámica
+ * @param {string} direction 'entradas' o 'salidas'
+ */
+function addPatchRow(direction) {
+    const container = document.getElementById(`container_${direction}`);
+    const template = document.getElementById('patchRowTemplate');
+    if (!container || !template) return;
+
+    const clone = template.content.cloneNode(true);
+    container.appendChild(clone);
+}
+
+function togglePatchExtra(btn) {
+    const block = btn.closest('.patch-block');
+    const zone = block.querySelector('.patch-hidden-zone');
+    if (!zone) return;
+
+    zone.classList.toggle('active');
+    btn.querySelector('.material-icons').innerText = zone.classList.contains('active') ? 'expand_less' : 'expand_more';
+}
+
+/**
+ * Abre el gestor de ruteo pre-seleccionando un equipo
+ */
+function openBatchPatch(type, itemId) {
+    // Primero cambiamos al tab de conexiones
+    const tabBtn = document.querySelector('.tab-btn[onclick*="tabRuteo"]');
+    showAdminTab('tabRuteo', tabBtn);
+    
+    // Luego abrimos el formulario
+    toggleAdminForm('conexiones');
+    
+    // Pre-seleccionamos el equipo
+    const item = getItemById(itemId);
+    if (item) {
+        selectItem(itemId, item.Nombre || item.Tipo);
+    }
+}
+
+// Inicialización de la aplicación
 init();

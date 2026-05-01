@@ -601,6 +601,53 @@ El error está así:
 
 ---
 
+### PROMPT 18: Rediseño de formularios y multi-patching bidireccional
+
+**Contexto:** Se requiere modernizar todos los formularios de carga para que parezcan "fichas" reales y transformar el formulario de conexiones en un gestor avanzado "multi-patching" que permite cargar múltiples entradas y salidas hacia un equipo central de una sola vez, utilizando selectores personalizados con búsqueda dinámica y gráficos de conexión.
+
+> **REGLA CRÍTICA DE ORTOGRAFÍA:** Esto es español, no inglés. Queda **ESTRICTAMENTE PROHIBIDO** capitalizar cada palabra de un título o botón (Title Case). Solo debe ir en mayúscula la primera letra de la frase y los nombres propios. Ejemplo: `Guardar todas las conexiones`, NO `Guardar Todas Las Conexiones`. Como primera tarea, revisá **el código completo** actual (`index.html` y `app.js`) para adecuar lo existente a esta regla, y usala a futuro en todo el proyecto.
+
+**TAREA 1: Refactorización formularios equipos/cables (estilo fichas)**
+- En `index.html`, rediseñar `formEquipo` y `formCable` aplicándoles la clase `.card` o un estilo similar para agrupar campos.
+- Crear una jerarquía visual: un encabezado para el ID (auto-generado pero editable) y Nombre/Tipo.
+- Usar iconos de `material-icons` adjuntos a los labels o inputs. 
+- Asegurar que todos los campos de texto usen `<datalist>` dinámicos poblados por la base de datos (como funciona actualmente), no del historial del navegador.
+
+**TAREA 2: Selector avanzado de equipos (custom dropdown)**
+- Crear un componente de UI (modal o contenedor flotante) que reemplace a los `<select>` nativos para buscar equipos.
+- Debe tener: barra de búsqueda rápida (busca en ID y nombre).
+- En lugar de botones, debe tener **filtros dinámicos tipo dropdown** para `Categoría`, `Tipo` y `Ubicación`. Estos dropdowns deben poblarse con los datos reales de la base de datos.
+- Los resultados deben ordenarse SIEMPRE alfabéticamente por su ID.
+- Al hacer clic en un resultado, debe guardarse su ID en un `<input type="hidden">` del formulario, y mostrar su nombre/ID en la caja visible del selector.
+- Este selector universal se usará para el equipo principal y para cada equipo secundario de las conexiones.
+
+**TAREA 3: Diseño del formulario de conexiones (multi-patching)**
+- En `index.html`, rehacer `formRuteo`. Estructura superior: Selector avanzado para el **equipo principal**.
+- Debajo, crear dos contenedores `.patch-section`: `---- Entradas ----` y `---- Salidas ----`.
+- **REGLA DE LAYOUT:** Las tres secciones (Equipo principal, Entradas, Salidas) DEBEN apilarse VERTICALMENTE (una debajo de la otra, ocupando el 100% del ancho) en todas las pantallas. No usar columnas horizontales paralelas para Entradas y Salidas.
+- Cada sección tiene un botón `[ + ]` para inyectar dinámicamente bloques de conexión mediante JS.
+- **Diseño del bloque de conexión (El mismo para entrada y salida):**
+  - Fila 1: Selector avanzado para el **equipo secundario**.
+  - Fila 2: Dos inputs paralelos (`Puerto origen` y `Puerto destino`).
+  - Fila 3: Gráfico CSS visual (ej. una línea vertical y horizontal) que una los puertos, con el input de `Tipo señal` en el medio.
+  - Fila 4: Botón tipo `<summary>` o `expand_more` (V) que despliega una zona oculta.
+  - Zona oculta: Input de ID de conexión (editable), Textarea de notas, y botón de eliminar fila.
+
+**TAREA 4: Lógica de multi-patching en `app.js` (solo frontend)**
+- Implementar la función `openBatchPatch(type, itemId)` que abra el formulario de multi-patching y pre-seleccione el equipo dado.
+- En la función `renderAdminTable()`, columna "Acciones", agregar un botón `[ Patching ]` (ícono `cable`) junto al botón de editar, que llame a `openBatchPatch`.
+- Lógica JS para clonar los bloques HTML al tocar `[ + ]`.
+- Lógica del `submit`: al guardar, el script debe iterar sobre todos los bloques visibles de entradas y salidas, validando y auto-generando el ID (`Origen/Destino`). **Para evitar tocar el código en Google Apps Script**, el frontend debe hacer un bucle asíncrono (usando `for...of` o `Promise.all()`) realizando múltiples llamadas `fetch` sucesivas a la acción existente `ADD_CONEXION`.
+- Mostrar un estado de carga global mientras se envían todas las conexiones, y notificar al finalizar.
+- Aumentar versión cache-busting en `index.html`.
+
+**Verificación:**
+- [ ] Títulos y botones no usan "Title Case" inglés.
+- [ ] Selector avanzado permite filtrar con dropdowns dinámicos y ordena por ID.
+- [ ] Formulario de conexiones soporta el layout gráfico apilado con zona expansible para ID/Notas.
+- [ ] El guardado por lotes se resuelve iterando en el frontend sin modificar `Code.gs`.
+---
+
 ### PROMPT 17: Corrección de Puertos en Árbol de Conexiones (Fixed Ports)
 
 **Contexto:** En la visualización del árbol de conexiones (fichas), si un nodo padre o hijo tiene múltiples conexiones, `renderTreeNode` renderiza un `<select>` que a menudo no coincide con la conexión real por la cual se trazó el camino. Hay que fijar la visualización del puerto para la conexión que enlaza al nodo con la cadena.
