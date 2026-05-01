@@ -84,7 +84,7 @@ function renderMapTopology() {
         height: container.clientHeight || window.innerHeight,
         background: { color: '#0d1117' },
         grid: false,
-        panning: { enabled: true, eventTypes: ['leftMouseDown'] },
+        panning: { enabled: true },
         mousewheel: { enabled: true, modifiers: null, minScale: 0.1, maxScale: 5 },
         interacting: false,
         connecting: { enabled: false }

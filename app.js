@@ -185,6 +185,8 @@ async function refreshDatabase() {
         const currentMode = localStorage.getItem('av_tech_mode') || 'OPERACION';
         if (currentMode === 'ADMIN') {
             renderAdminTable(currentSort.type || 'equipos');
+        } else if (currentMode === 'MAPA') {
+            if (typeof renderMapTopology === 'function') renderMapTopology();
         } else {
             const centralNode = document.querySelector('.tree-node.central .badge-id');
             if (centralNode) {
@@ -1904,7 +1906,7 @@ async function syncQueue() {
  */
 function setMode(mode, pushState = true) {
     currentMode = mode;
-    const modeTitle = mode === 'OPERACION' ? 'Operación' : (mode === 'ADMIN' ? 'Administración' : 'Mapa de Topología');
+    const modeTitle = mode === 'OPERACION' ? 'Operación' : (mode === 'ADMIN' ? 'Administración' : 'Mapa');
     document.getElementById('activeModeDisplay').innerText = modeTitle;
     
     sideMenu.classList.remove('active');
