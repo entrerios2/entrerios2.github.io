@@ -650,3 +650,84 @@ function resetMapZoom() {
         x6Graph.centerContent();
     }
 }
+
+function exportMapSVG() {
+    const toast = (msg, type) => (typeof showToast === 'function' ? showToast(msg, type) : null);
+
+    if (!x6Graph) { toast('Abrí primero el mapa', 'warning'); return; }
+
+    const liveSvg = document.querySelector('#cy svg');
+    if (!liveSvg) { toast('No se encontró el SVG del mapa', 'error'); return; }
+
+    // 1. Bounding box del contenido en coords del modelo (antes de transformar)
+    const bbox = x6Graph.getContentBBox();
+    if (!bbox || !bbox.width || !bbox.height) {
+        toast('El mapa está vacío', 'warning');
+        return;
+    }
+    const padding = 24;
+    const vbX = bbox.x - padding;
+    const vbY = bbox.y - padding;
+    const vbW = bbox.width + padding * 2;
+    const vbH = bbox.height + padding * 2;
+
+    // 2. Clonar y resetear el transform de pan/zoom para que el viewBox calce
+    const clone = liveSvg.cloneNode(true);
+    const viewport = clone.querySelector('.x6-graph-svg-viewport');
+    if (viewport) viewport.removeAttribute('transform');
+
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+    clone.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
+    clone.setAttribute('width', vbW);
+    clone.setAttribute('height', vbH);
+
+    // 3. Resolver CSS variables (X6 las usa en stroke/fill — no se renderizan fuera del browser)
+    const rootStyle = getComputedStyle(document.documentElement);
+    const cssVars = [
+        '--accent-cyan', '--accent-magenta', '--accent-purple',
+        '--bg-color', '--card-bg', '--text-primary', '--text-secondary',
+        '--success', '--warning', '--danger', '--border-color'
+    ];
+    let serialized = new XMLSerializer().serializeToString(clone);
+    for (const v of cssVars) {
+        const value = rootStyle.getPropertyValue(v).trim();
+        if (!value) continue;
+        const re = new RegExp(`var\\(\\s*${v}\\s*(?:,[^)]*)?\\)`, 'g');
+        serialized = serialized.replace(re, value);
+    }
+
+    // 4. Re-parsear para inyectar fondo y embeber fuente
+    const doc = new DOMParser().parseFromString(serialized, 'image/svg+xml');
+    const root = doc.documentElement;
+
+    const bgColor = (rootStyle.getPropertyValue('--bg-color').trim() || '#0d1117');
+    const bgRect = doc.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bgRect.setAttribute('x', vbX);
+    bgRect.setAttribute('y', vbY);
+    bgRect.setAttribute('width', vbW);
+    bgRect.setAttribute('height', vbH);
+    bgRect.setAttribute('fill', bgColor);
+    root.insertBefore(bgRect, root.firstChild);
+
+    const styleEl = doc.createElementNS('http://www.w3.org/2000/svg', 'style');
+    styleEl.textContent = "text { font-family: 'Roboto Condensed', 'Outfit', Arial, sans-serif; }";
+    root.insertBefore(styleEl, root.firstChild);
+
+    // 5. Serializar y descargar
+    const finalSvg = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n'
+        + '<!-- Generado por Circuito AV Tech -->\n'
+        + new XMLSerializer().serializeToString(root);
+    const blob = new Blob([finalSvg], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
+    a.href = url;
+    a.download = `topologia-${stamp}.svg`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+    toast('SVG exportado', 'success');
+}

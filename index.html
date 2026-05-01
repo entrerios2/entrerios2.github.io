@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <title>Audio y Video Circuito ER2</title>
-    <link rel="stylesheet" href="styles.css?v=134.0">
+    <link rel="stylesheet" href="styles.css?v=135.0">
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -50,6 +50,7 @@
             <button class="icon-btn zoom-btn map-floating-btn" onclick="zoomMap(0.2)" aria-label="Acercar" title="Acercar"><span class="material-icons">add</span></button>
             <button class="icon-btn zoom-btn map-floating-btn" onclick="zoomMap(-0.2)" aria-label="Alejar" title="Alejar"><span class="material-icons">remove</span></button>
             <button class="icon-btn zoom-btn map-floating-btn" onclick="resetMapZoom()" aria-label="Centrar mapa" title="Centrar" style="margin-top: 4px;"><span class="material-icons">center_focus_strong</span></button>
+            <button class="icon-btn zoom-btn map-floating-btn" onclick="exportMapSVG()" aria-label="Exportar como SVG" title="Exportar SVG" style="margin-top: 4px;"><span class="material-icons">download</span></button>
         </div>
         <div id="mapTooltip" class="map-tooltip" style="display:none;"></div>
     </div>
@@ -396,8 +397,8 @@
 
     <!-- Floating Mode Toggle REMOVED -->
 
-    <script src="topology.js?v=134.0"></script>
-    <script src="app.js?v=134.0"></script>
+    <script src="topology.js?v=135.0"></script>
+    <script src="app.js?v=135.0"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
