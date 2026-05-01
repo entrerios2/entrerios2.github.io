@@ -711,3 +711,37 @@ El error está así:
 
 **TAREA 5: Incrementar cache busting**
 - En `index.html` subir versión `?v=XX.0`.
+
+
+> **ADVERTENCIA PARA GEMINI 3 FLASH:** Para los siguientes Prompts, DEBES obedecer estrictamente las instrucciones. Tienes estrictamente prohibido modificar otras partes funcionales del sitio que no estén solicitadas aquí. No debes alterar nombres de clases CSS existentes ni romper estilos globales que afecten a otros componentes. Respeta escrupulosamente el estilo visual establecido del sitio (variables CSS, modo oscuro, fuentes).
+
+### PROMPT 19: Gestor de Metadatos Avanzados (Editor JSON y UI)
+
+**Contexto:** Se necesita potenciar la columna `Metadatos` (JSON) en la BD para almacenar información variada sin agregar columnas: 1) Manuales asociados, 2) Agrupadores (Racks), y 3) Cualquier otro dato anidado. Para lograrlo de forma escalable, implementaremos una UI mixta: controles amigables para los casos comunes y un editor JSON directo para datos anidados y edición libre. Aplicará a Equipos, Cables y Conexiones.
+
+**TAREA 1: UI del Formulario de Edición**
+- En `index.html`, al final de `formEquipo`, `formCable` y el bloque de `formRuteo`, agregar un contenedor `div class="metadata-section"`.
+- **Controles rápidos:**
+  - Botón `[ + Añadir manual ]`. (Inyecta fila con Nombre y URL).
+  - En `formEquipo`: `<label>¿Montado en otro equipo? (ID)</label> <input type="text" class="montado-input">`.
+- **Editor Avanzado (JSON genérico):**
+  - Agregar un `<textarea class="metadata-json-editor" style="font-family: monospace;" placeholder='{"clave": "valor"}'></textarea>`.
+  - Este textarea mostrará el objeto JSON completo (formateado con `JSON.stringify(meta, null, 2)`).
+  - *Sincronización:* Si el usuario usa los controles rápidos (añadir manual), el textarea debe actualizarse automáticamente. Si el usuario edita el textarea directamente, puede modificar cualquier clave (incluso las reservadas como `manuales` o anidar objetos libremente). Deberá validar que sea JSON válido al perder el foco (`blur`).
+
+**TAREA 2: Lógica de Metadatos en `app.js` (Submit)**
+- Al enviar el formulario, intentar hacer `JSON.parse` del contenido del textarea avanzado. Si falla, detener el submit y avisar al usuario.
+- Si es válido, usar ese objeto resultante DIRECTAMENTE como el valor para `body.metadatos`. No hay restricciones de claves, el usuario tiene control total del objeto, permitiendo subniveles.
+- Al cargar el modo edición (`editItem`), poblar el textarea con el JSON crudo formateado. Además, leer las propiedades conocidas (`manuales`, `montado_en`) para rellenar los "Controles rápidos" visuales si existen.
+
+**TAREA 3: Ficha de Información (Detalles)**
+- En `renderResults(id)` o el visor de conexiones:
+  - Extraer `meta.manuales` y `meta.montado_en` para dibujarlos con sus estilos dedicados si existen.
+  - Para todo el resto del objeto (incluyendo subniveles y claves modificadas o nuevas), implementar una función recursiva sencilla que dibuje el JSON como una lista o tabla de pares clave-valor anidados en la vista de la ficha, excluyendo solo lo que ya se dibujó gráficamente.
+
+**Verificación:**
+- [ ] El textarea valida correctamente el JSON y permite anidar objetos.
+- [ ] Los botones rápidos (Manuales/Rack) sincronizan sus cambios con el textarea de JSON.
+- [ ] La Ficha dibuja la información de los metadatos anidados de forma elegante.
+
+---

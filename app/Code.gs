@@ -103,6 +103,18 @@ function doPost(e) {
       const success = findAndReplaceRow("3_Conexiones", "ID_Patch", body.id_patch, rowData);
       result = success ? { status: "success", message: "Conexión editada" } : { status: "error", message: "ID no encontrado" };
     }
+    else if (action === "DELETE_CONEXION") {
+      const success = deleteRowById("3_Conexiones", "ID_Patch", body.id_patch);
+      result = success ? { status: "success", message: "Conexión eliminada" } : { status: "error", message: "ID no encontrado" };
+    }
+    else if (action === "DELETE_EQUIPO") {
+      const success = deleteRowById("1_Equipos", "ID_Equipo", body.id);
+      result = success ? { status: "success", message: "Equipo eliminado" } : { status: "error", message: "ID no encontrado" };
+    }
+    else if (action === "DELETE_CABLE") {
+      const success = deleteRowById("2_Cables", "ID_Cable", body.id);
+      result = success ? { status: "success", message: "Cable eliminado" } : { status: "error", message: "ID no encontrado" };
+    }
 
     return createJsonResponse(result);
   } catch (error) {
@@ -195,6 +207,38 @@ function findAndReplaceRow(sheetName, idColumnName, idValue, newRowData) {
     if (match) {
       // Reemplazamos la fila completa (i+1 porque es 1-indexed en la hoja)
       sheet.getRange(i + 1, 1, 1, newRowData.length).setValues([newRowData]);
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Busca un ID y elimina la fila completa.
+ */
+function deleteRowById(sheetName, idColumnName, idValue) {
+  const sheet = SS.getSheetByName(sheetName);
+  if (!sheet) return false;
+
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const idIndex = headers.indexOf(idColumnName);
+
+  if (idIndex === -1) return false;
+
+  const searchStr = String(idValue).trim().toLowerCase();
+
+  for (let i = 1; i < data.length; i++) {
+    const rawCellValue = data[i][idIndex];
+    const cellStr = String(rawCellValue).trim().toLowerCase();
+    
+    let match = (cellStr === searchStr);
+    if (!match && rawCellValue !== "" && idValue !== "" && !isNaN(rawCellValue) && !isNaN(idValue)) {
+      match = (Number(rawCellValue) === Number(idValue));
+    }
+
+    if (match) {
+      sheet.deleteRow(i + 1);
       return true;
     }
   }

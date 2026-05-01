@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AV Tech SPA - Logic Core
  * Vanilla JS + Graph Traversal + PWA Sync
  */
@@ -16,7 +16,6 @@ let treeMaxDepth = 1; // Default depth for tree expansion
 let activeGroupings = { equipos: '', cables: '', conexiones: '' };
 let sectionsOpenState = { equipos: false, cables: false, conexiones: false };
 let html5QrCode = null;
-let originalBatchIds = []; // Tracking IDs for batch patching deletions
 
 // DOM Elements
 const searchInput = document.getElementById('searchInput');
@@ -29,7 +28,7 @@ const closeMenuBtn = document.getElementById('closeMenuBtn');
 const adminPanel = document.getElementById('adminPanel');
 const adminTableHead = document.getElementById('adminTableHead');
 const adminTableBody = document.getElementById('adminTableBody');
-const adminFormContainer = document.getElementById('adminModal');
+const adminFormContainer = document.getElementById('adminFormContainer');
 const formContainerInner = document.getElementById('formContainerInner');
 const searchSection = document.querySelector('.search-container');
 const offlineStatus = document.querySelector('.offline-status');
@@ -64,7 +63,7 @@ searchToggleBtn?.addEventListener('click', () => {
 });
 
 /**
- * 1. Inicialización y Datos
+ * 1. Inicializaci├│n y Datos
  */
 async function init() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -82,7 +81,7 @@ async function init() {
             API_URL = storedUrl;
             startApp();
         } else {
-            // Mostrar modal de configuración
+            // Mostrar modal de configuraci├│n
             document.getElementById('setupModal').style.display = 'flex';
         }
     }
@@ -108,7 +107,7 @@ async function startApp() {
     // Identidad
     if (!techName) {
         techName = prompt("Ingrese su nombre para registrar los cambios:");
-        if (!techName) techName = "Técnico Anónimo";
+        if (!techName) techName = "T├⌐cnico An├│nimo";
         localStorage.setItem('tech_name', techName);
     }
 
@@ -163,7 +162,7 @@ async function fetchData() {
         console.log('Base de datos actualizada');
         applyConfig();
     } catch (error) {
-        console.warn('No se pudo obtener datos frescos, usando caché local', error);
+        console.warn('No se pudo obtener datos frescos, usando cach├⌐ local', error);
         applyConfig();
     }
 }
@@ -206,7 +205,7 @@ async function refreshDatabase() {
 function applyConfig() {
     if (!db.configuracion) return;
 
-    // 1. Título de la App
+    // 1. T├¡tulo de la App
     const titleConfig = db.configuracion.find(c => c.ID_Configuracion === 'nombre_pagina');
     if (titleConfig && titleConfig.Valor) {
         const titleEl = document.getElementById('appTitle');
@@ -335,7 +334,7 @@ function findFullRoute(targetId) {
 }
 
 /**
- * 2.1 Utilidades de Búsqueda
+ * 2.1 Utilidades de B├║squeda
  */
 function highlightText(text, query) {
     if (!query) return text;
@@ -366,15 +365,15 @@ function renderInventory() {
     const sections = [
         { 
             type: 'equipos', title: 'Equipos', icon: 'speaker',
-            groups: [{val: '', label: 'Sin Agrupar'}, {val: 'Categoria', label: 'Categoría'}, {val: 'Ubicacion', label: 'Ubicación'}, {val: 'Contenedor', label: 'Contenedor'}, {val: 'Propietario', label: 'Propietario'}, {val: 'Estado', label: 'Estado'}]
+            groups: [{val: '', label: 'Sin Agrupar'}, {val: 'Categoria', label: 'Categor├¡a'}, {val: 'Ubicacion', label: 'Ubicaci├│n'}, {val: 'Contenedor', label: 'Contenedor'}, {val: 'Propietario', label: 'Propietario'}, {val: 'Estado', label: 'Estado'}]
         },
         { 
             type: 'cables', title: 'Cables', icon: 'cable',
-            groups: [{val: '', label: 'Sin Agrupar'}, {val: 'Tipo', label: 'Tipo'}, {val: 'Largo', label: 'Longitud'}, {val: 'Ubicacion', label: 'Ubicación'}, {val: 'Categoria', label: 'Categoría'}, {val: 'Propietario', label: 'Propietario'}, {val: 'Contenedor', label: 'Contenedor'}, {val: 'Estado', label: 'Estado'}]
+            groups: [{val: '', label: 'Sin Agrupar'}, {val: 'Tipo', label: 'Tipo'}, {val: 'Largo', label: 'Longitud'}, {val: 'Ubicacion', label: 'Ubicaci├│n'}, {val: 'Categoria', label: 'Categor├¡a'}, {val: 'Propietario', label: 'Propietario'}, {val: 'Contenedor', label: 'Contenedor'}, {val: 'Estado', label: 'Estado'}]
         },
         { 
             type: 'conexiones', title: 'Conexiones', icon: 'settings_input_component',
-            groups: [{val: '', label: 'Sin Agrupar'}, {val: 'ID_Origen', label: 'Origen'}, {val: 'ID_Destino', label: 'Destino'}, {val: 'Tipo_Senial', label: 'Tipo Señal'}, {val: 'Estado', label: 'Estado'}]
+            groups: [{val: '', label: 'Sin Agrupar'}, {val: 'ID_Origen', label: 'Origen'}, {val: 'ID_Destino', label: 'Destino'}, {val: 'Tipo_Senial', label: 'Tipo Se├▒al'}, {val: 'Estado', label: 'Estado'}]
         }
     ];
 
@@ -399,7 +398,7 @@ function renderInventory() {
                         <tr>${headers.map(h => {
                             let label = h;
                             if (h.startsWith('ID_')) label = 'ID';
-                            if (h === 'Ubicacion') label = 'Ubicación';
+                            if (h === 'Ubicacion') label = 'Ubicaci├│n';
                             if (h === 'Contenedor') label = 'Contenedor';
                             if (h === 'Estado') label = 'Estado';
                             if (h === 'Tipo') label = 'Tipo';
@@ -407,7 +406,7 @@ function renderInventory() {
                             if (h === 'Puerto_Origen' || h === 'Puerto_Destino') label = 'Puerto';
                             if (h === 'ID_Origen') label = 'Origen';
                             if (h === 'ID_Destino') label = 'Destino';
-                            if (h === 'Tipo_Senial') label = 'Señal';
+                            if (h === 'Tipo_Senial') label = 'Se├▒al';
                             
                             return `<th onclick="event.stopPropagation(); sortInventory('${section.type}', '${h}')">${label}</th>`;
                         }).join('')}</tr>
@@ -612,7 +611,7 @@ function renderResults(specificId = null, pushState = true) {
     });
 
     if (matches.length === 0) {
-        resultsContainer.innerHTML = `<div class="card" style="text-align:center">No se encontró "${rawQuery}"</div>`;
+        resultsContainer.innerHTML = `<div class="card" style="text-align:center">No se encontr├│ "${rawQuery}"</div>`;
         return;
     }
 
@@ -784,9 +783,9 @@ function renderTreeNode(id, isCentral, fixedInputConn = null, fixedOutputConn = 
             
             <div class="compact-meta">
                 <div class="meta-pill" title="Propietario"><span class="material-icons" style="font-size:0.9rem">person</span> ${info?.Propietario || '-'}</div>
-                <div class="meta-pill" title="Ubicación"><span class="material-icons" style="font-size:0.9rem">location_on</span> ${info?.Ubicacion || '-'}</div>
+                <div class="meta-pill" title="Ubicaci├│n"><span class="material-icons" style="font-size:0.9rem">location_on</span> ${info?.Ubicacion || '-'}</div>
                 <div class="meta-pill" title="Contenedor"><span class="material-icons" style="font-size:0.9rem">inventory_2</span> ${info?.Contenedor || '-'}</div>
-                ${info?.Categoria ? `<div class="meta-pill" title="Categoría"><span class="material-icons" style="font-size:0.9rem">category</span> ${info.Categoria}</div>` : ''}
+                ${info?.Categoria ? `<div class="meta-pill" title="Categor├¡a"><span class="material-icons" style="font-size:0.9rem">category</span> ${info.Categoria}</div>` : ''}
                 ${isCable ? `
                     ${info?.Tipo ? `<div class="meta-pill" title="Tipo"><span class="material-icons" style="font-size:0.9rem">cable</span> ${info.Tipo}</div>` : ''}
                     ${info?.Largo ? `<div class="meta-pill" title="Largo"><span class="material-icons" style="font-size:0.9rem">straighten</span> ${info.Largo}m</div>` : ''}
@@ -890,7 +889,7 @@ function renderPortListEntry(conn, type) {
             <span class="material-icons" style="font-size:0.8rem">${type === 'in' ? 'login' : 'logout'}</span>
             <div style="flex:1; overflow:hidden">
                 <div class="port-name">${port}</div>
-                <div class="port-target">→ ${targetName}</div>
+                <div class="port-target">ΓåÆ ${targetName}</div>
             </div>
             <label class="premium-checkbox" onclick="event.stopPropagation()">
                 <input type="checkbox" id="chk_${conn.ID_Patch}" ${isConn ? 'checked' : ''} 
@@ -909,7 +908,7 @@ function renderPortSelect(nodeId, conns, direction) {
     sel.innerHTML = conns.map(c => {
         const targetId = direction === 'forward' ? c.ID_Destino : c.ID_Origen;
         const port = direction === 'forward' ? c.Puerto_Origen : c.Puerto_Destino;
-        return `<option value="${targetId}" ${targetId === actualChoice ? 'selected' : ''}>${port} → ${targetId}</option>`;
+        return `<option value="${targetId}" ${targetId === actualChoice ? 'selected' : ''}>${port} ΓåÆ ${targetId}</option>`;
     }).join('');
 
     sel.onchange = (e) => {
@@ -926,7 +925,7 @@ function renderTreeConnection(conn, direction) {
     el.className = 'connection-jump';
     el.innerHTML = `
         <div class="arrow-line ${isConnected ? 'connected' : 'disconnected'}" 
-             style="cursor:pointer" title="Ver detalles de conexión" 
+             style="cursor:pointer" title="Ver detalles de conexi├│n" 
              onclick="showConnectionModal('${conn.ID_Patch}')">
             <div class="signal-pill">${conn.Tipo_Senial}</div>
         </div>
@@ -964,7 +963,7 @@ function showConnectionModal(idPatch) {
             
             <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px; padding-right:30px;">
                 <span class="material-icons" style="color:var(--accent-cyan); font-size:1.5rem;">settings_input_component</span>
-                <h2 style="margin:0; font-size:1.1rem; line-height:1.2">Detalles de conexión</h2>
+                <h2 style="margin:0; font-size:1.1rem; line-height:1.2">Detalles de conexi├│n</h2>
                 <span class="badge-id" style="font-size:0.75rem; padding:0.3rem 0.6rem;">${idPatch}</span>
             </div>
 
@@ -975,7 +974,7 @@ function showConnectionModal(idPatch) {
                 <div class="meta-pill" title="Ver destino" style="cursor:pointer" onclick="this.closest('.modal-overlay').remove(); renderResults('${conn.ID_Destino}')">
                     <span class="material-icons" style="font-size:0.9rem">logout</span> ${conn.ID_Destino} (${conn.Puerto_Destino})
                 </div>
-                <div class="meta-pill" title="Señal"><span class="material-icons" style="font-size:0.9rem">wifi_tethering</span> ${conn.Tipo_Senial}</div>
+                <div class="meta-pill" title="Se├▒al"><span class="material-icons" style="font-size:0.9rem">wifi_tethering</span> ${conn.Tipo_Senial}</div>
                 ${conn.Notas ? `<div class="meta-pill" title="Notas"><span class="material-icons" style="font-size:0.9rem">description</span> ${conn.Notas}</div>` : ''}
             </div>
 
@@ -1113,15 +1112,15 @@ async function togglePatch(idPatch, checkboxEl) {
 }
 
 /**
- * 3.1 Funciones de Administración
+ * 3.1 Funciones de Administraci├│n
  */
 function showAdminTab(tabId, btn) {
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     if (btn) btn.classList.add('active');
     
     // Reset form
-    if (adminFormContainer) adminFormContainer.style.display = 'none';
-    if (formContainerInner) formContainerInner.innerHTML = '';
+    adminFormContainer.style.display = 'none';
+    formContainerInner.innerHTML = '';
     
     const type = tabId === 'tabEquipo' ? 'equipos' : (tabId === 'tabCable' ? 'cables' : 'conexiones');
     renderAdminTable(type);
@@ -1156,16 +1155,16 @@ function renderAdminTable(type) {
         <tr>
             ${headers[type].map(h => `<td>${row[h] || '-'}</td>`).join('')}
             <td style="white-space: nowrap;">
-                ${type !== 'conexiones' ? `
                 <button class="action-btn btn-warning" style="padding:4px 8px; font-size:0.7rem" 
-                        onclick="editItem('${type}', '${row[idKey]}')" title="Editar">
+                        onclick="editItem('${type}', '${row[headers[type][0]]}')" title="Editar">
                     <span class="material-icons" style="font-size:1rem">edit</span>
                 </button>
+                ${type !== 'conexiones' ? `
                 <button class="action-btn" style="padding:4px 8px; font-size:0.7rem; background:var(--accent-purple); color:white; border:none;" 
-                        onclick="openBatchPatch('${type}', '${row[idKey]}')" title="Gestionar conexiones">
-                    <span class="material-icons" style="font-size:1rem">hub</span>
+                        onclick="openBatchPatch('${type}', '${row[headers[type][0]]}')" title="Ruteo">
+                    <span class="material-icons" style="font-size:1rem">cable</span>
                 </button>
-                ` : '-'}
+                ` : ''}
             </td>
         </tr>
     `).join('');
@@ -1205,13 +1204,13 @@ function toggleAdminForm(type) {
     
     formContainerInner.innerHTML = `
         <div class="form-header-ficha">
-            <h2>${type === 'equipos' ? 'Nuevo equipo' : (type === 'cables' ? 'Nuevo cable' : 'Nueva conexión')}</h2>
+            <h2>${type === 'equipos' ? 'Nuevo equipo' : (type === 'cables' ? 'Nuevo cable' : 'Nueva conexi├│n')}</h2>
         </div>
     `;
     formContainerInner.appendChild(form);
     document.getElementById('adminModal').style.display = 'flex';
     
-    // Limpiar campos específicos del ruteo multi-patch
+    // Limpiar campos espec├¡ficos del ruteo multi-patch
     if (type === 'conexiones') {
         form.querySelector('#main_id_input').value = '';
         form.querySelector('#main_selector_label').innerText = 'Seleccionar equipo...';
@@ -1254,12 +1253,6 @@ function editItem(type, id) {
         return;
     }
 
-    // Redirigir edición de conexiones al editor por lotes del equipo origen
-    if (type === 'conexiones') {
-        openBatchPatch('equipos', item.ID_Origen);
-        return;
-    }
-
     const formId = type === 'equipos' ? 'formEquipo' : (type === 'cables' ? 'formCable' : 'formRuteo');
     const form = document.getElementById(formId).cloneNode(true);
     form.style.display = 'grid';
@@ -1297,7 +1290,7 @@ function editItem(type, id) {
             input.value = item[dbKey];
         }
         if (input.name === 'id' || input.name === 'id_patch') {
-            input.readOnly = isEdit; // Permitir edición si es nuevo
+            input.readOnly = isEdit; // Permitir edici├│n si es nuevo
             if (!isEdit) {
                 input.addEventListener('input', () => {
                     input.dataset.auto = 'false';
@@ -1305,19 +1298,6 @@ function editItem(type, id) {
             }
         }
     });
-
-    // Configurar acceso rápido a ruteo si es equipo o cable en edición
-    if (isEdit && (type === 'equipos' || type === 'cables')) {
-        const quickBox = form.querySelector('#quickActionRuteo') || form.querySelector('#quickActionRuteoCable');
-        const quickBtn = form.querySelector('#btnGoToRuteo_E') || form.querySelector('#btnGoToRuteo_C');
-        if (quickBox && quickBtn) {
-            quickBox.style.display = 'flex';
-            quickBtn.onclick = () => {
-                closeAdminModal();
-                openBatchPatch(type, id);
-            };
-        }
-    }
 
     formContainerInner.innerHTML = '';
     formContainerInner.appendChild(form);
@@ -1334,57 +1314,63 @@ async function handleFormSubmit(e, formId) {
 
     if (formId === 'formRuteo') {
         const mainId = form.querySelector('#main_id_input').value;
+        const isEdit = form.querySelector('[name="isEdit"]').value === 'true';
+
         if (!mainId) { alert("Selecciona el equipo principal"); return; }
         
         const inputs = Array.from(form.querySelectorAll('#container_entradas .patch-block'));
         const outputs = Array.from(form.querySelectorAll('#container_salidas .patch-block'));
-        const currentBatchIds = Array.from(form.querySelectorAll('.p-id')).map(el => el.value).filter(Boolean);
+        
+        if (inputs.length === 0 && outputs.length === 0) {
+            alert("Agrega al menos una conexi├│n");
+            return;
+        }
 
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner spinner-sm"></span> Guardando...';
 
         try {
-            // 1. Procesar Borrados: IDs que estaban al inicio pero ya no están en el form
-            const idsToDelete = originalBatchIds.filter(id => !currentBatchIds.includes(id));
-            for (const idPatch of idsToDelete) {
-                await handleAction('DELETE_CONEXION', { id_patch: idPatch });
-                await logActivity(idPatch, 'DELETE', 'Conexión eliminada vía Batch Editor');
-            }
-
-            // 2. Procesar Entradas y Salidas (ADD o EDIT)
-            const allBlocks = [...inputs.map(b => ({b, dir: 'in'})), ...outputs.map(b => ({b, dir: 'out'}))];
-            
-            for (const {b, dir} of allBlocks) {
-                const secId = b.querySelector('.sel-id').value;
+            // Entradas
+            for (const block of inputs) {
+                const secId = block.querySelector('.sel-id').value;
                 if (!secId) continue;
-
-                const idP = b.querySelector('.p-id').value || (dir === 'in' ? `${secId}/${mainId}` : `${mainId}/${secId}`);
                 const payload = {
-                    id_patch: idP,
-                    id_origen: dir === 'in' ? secId : mainId,
-                    puerto_origen: b.querySelector('.p-ori').value,
-                    id_destino: dir === 'in' ? mainId : secId,
-                    puerto_destino: b.querySelector('.p-des').value,
-                    tipo_senial: b.querySelector('.p-signal').value,
-                    notas: b.querySelector('.p-notes').value,
-                    estado: 'Desconectado'
+                    id_patch: block.querySelector('.p-id').value || `${secId}/${mainId}`,
+                    id_origen: secId,
+                    puerto_origen: block.querySelector('.p-ori').value,
+                    id_destino: mainId,
+                    puerto_destino: block.querySelector('.p-des').value,
+                    tipo_senial: block.querySelector('.p-signal').value,
+                    notas: block.querySelector('.p-notes').value,
+                    estado: 'Desconectado',
+                    isEdit: isEdit ? 'true' : 'false'
                 };
-
-                // Decidir si es ADD o EDIT basado en si el ID ya existía en la DB original
-                const exists = originalBatchIds.includes(idP) || db.conexiones.some(c => String(c.ID_Patch) === String(idP));
-                const action = exists ? 'EDIT_CONEXION' : 'ADD_CONEXION';
-                payload.isEdit = exists ? 'true' : 'false';
-
-                await handleAction(action, payload);
+                await handleAction(isEdit ? 'EDIT_CONEXION' : 'ADD_CONEXION', payload);
             }
-
-            alert("Cambios guardados con éxito");
+            // Salidas
+            for (const block of outputs) {
+                const secId = block.querySelector('.sel-id').value;
+                if (!secId) continue;
+                const payload = {
+                    id_patch: block.querySelector('.p-id').value || `${mainId}/${secId}`,
+                    id_origen: mainId,
+                    puerto_origen: block.querySelector('.p-ori').value,
+                    id_destino: secId,
+                    puerto_destino: block.querySelector('.p-des').value,
+                    tipo_senial: block.querySelector('.p-signal').value,
+                    notas: block.querySelector('.p-notes').value,
+                    estado: 'Desconectado',
+                    isEdit: isEdit ? 'true' : 'false'
+                };
+                await handleAction(isEdit ? 'EDIT_CONEXION' : 'ADD_CONEXION', payload);
+            }
+            alert("Cambios guardados con ├⌐xito");
             closeAdminModal();
             fetchData();
             return;
         } catch (err) {
             console.error("Error en ruteo por lotes:", err);
-            alert("Ocurrió un error al guardar.");
+            alert("Ocurri├│ un error al guardar.");
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalBtnHTML;
@@ -1417,7 +1403,7 @@ async function handleFormSubmit(e, formId) {
         }
     } catch (e) {
         console.error("Error al guardar:", e);
-        alert("No se pudo completar la operación.");
+        alert("No se pudo completar la operaci├│n.");
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnHTML;
@@ -1432,7 +1418,7 @@ async function handleAction(action, body) {
     const originalText = "Busca ID o nombre...";
     searchInput.placeholder = "Sincronizando...";
     
-    // Actualización optimista del estado local
+    // Actualizaci├│n optimista del estado local
     if (action.startsWith('ADD_')) {
         const type = action.includes('EQUIPO') ? 'equipos' : (action.includes('CABLE') ? 'cables' : 'conexiones');
         const entry = mapToDb(body, type);
@@ -1462,9 +1448,9 @@ async function handleAction(action, body) {
     if (navigator.onLine) {
         try {
             await sendToServer(action, body);
-            searchInput.placeholder = "¡Guardado!";
+            searchInput.placeholder = "┬íGuardado!";
             setTimeout(() => {
-                if (searchInput.placeholder === "¡Guardado!") {
+                if (searchInput.placeholder === "┬íGuardado!") {
                     searchInput.placeholder = originalText;
                 }
             }, 2000);
@@ -1557,7 +1543,7 @@ function updateSelects() {
             const id = item.ID_Equipo || item.ID_Cable;
             const nombre = item.Nombre || item.Tipo || '';
             const isCable = !!item.ID_Cable;
-            const icon = isCable ? '🔌' : '🔊';
+            const icon = isCable ? '≡ƒöî' : '≡ƒöè';
             const displayName = nombre ? `${icon} ${id} (${nombre})` : `${icon} ${id}`;
             return `<option value="${id}">${displayName}</option>`;
         }).join('');
@@ -1650,7 +1636,7 @@ function queueAction(action) {
     const queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
     queue.push(action);
     localStorage.setItem('offline_queue', JSON.stringify(queue));
-    alert('Sin conexión. La acción se sincronizará automáticamente al volver online.');
+    alert('Sin conexi├│n. La acci├│n se sincronizar├í autom├íticamente al volver online.');
 }
 
 async function syncQueue() {
@@ -1666,7 +1652,7 @@ async function syncQueue() {
         }
     }
     localStorage.setItem('offline_queue', '[]');
-    alert('Sincronización completada con éxito.');
+    alert('Sincronizaci├│n completada con ├⌐xito.');
 }
 
 /**
@@ -1674,7 +1660,7 @@ async function syncQueue() {
  */
 function setMode(mode, pushState = true) {
     currentMode = mode;
-    const modeTitle = mode === 'OPERACION' ? 'Operación' : 'Administración';
+    const modeTitle = mode === 'OPERACION' ? 'Operaci├│n' : 'Administraci├│n';
     document.getElementById('activeModeDisplay').innerText = modeTitle;
     
     sideMenu.classList.remove('active');
@@ -1738,9 +1724,9 @@ qrStartBtn.addEventListener('click', async () => {
         html5QrCode = new Html5Qrcode("reader");
     }
 
-    if (isQrScanning) return; // Ya está escaneando
+    if (isQrScanning) return; // Ya est├í escaneando
 
-    // Pequeño delay para asegurar que el modal tiene dimensiones reales en el DOM antes de que la cámara calcule su tamaño
+    // Peque├▒o delay para asegurar que el modal tiene dimensiones reales en el DOM antes de que la c├ímara calcule su tama├▒o
     await new Promise(r => setTimeout(r, 500));
 
     const readerEl = document.getElementById('reader');
@@ -1758,7 +1744,7 @@ qrStartBtn.addEventListener('click', async () => {
                 qrbox: { width: 200, height: 200 }
             },
             (decodedText) => {
-                // Al leer, detenemos la cámara de forma segura
+                // Al leer, detenemos la c├ímara de forma segura
                 if (isQrScanning) {
                     isQrScanning = false;
                     html5QrCode.stop().then(() => {
@@ -1767,7 +1753,7 @@ qrStartBtn.addEventListener('click', async () => {
                         if (searchContainer.style.display === 'none') {
                             searchContainer.style.display = 'flex';
                         }
-                        renderResults(); // Dispara la búsqueda
+                        renderResults(); // Dispara la b├║squeda
                     }).catch(err => console.log("Error deteniendo QR:", err));
                 }
             },
@@ -1776,7 +1762,7 @@ qrStartBtn.addEventListener('click', async () => {
         isQrScanning = true;
     } catch (err) {
         console.error('QR Critical failure:', err);
-        alert('No se pudo iniciar la cámara. Asegúrate de dar permisos.');
+        alert('No se pudo iniciar la c├ímara. Aseg├║rate de dar permisos.');
         qrModal.style.display = 'none';
         isQrScanning = false;
     }
@@ -1913,7 +1899,7 @@ function generateCableLabel(item) {
     return `
         <div class="label-base label-cable">
             <div class="zone">${qrHtml}${dataHtml}</div>
-            <div class="pegado">┄ doblar ┄</div>
+            <div class="pegado">Γöä doblar Γöä</div>
             <div class="zone">${dataHtml}${qrHtml}</div>
         </div>
     `;
@@ -1924,13 +1910,13 @@ window.addEventListener('afterprint', () => {
 });
 
 
-// --- Lógica de Administración (PROMPT 18) ---
+// --- L├│gica de Administraci├│n (PROMPT 18) ---
 
 let currentSelectorTarget = null;
 
 /**
  * Abre el selector avanzado de equipos/cables
- * @param {string|HTMLElement} target 'main' o el bloque de conexión secundaria
+ * @param {string|HTMLElement} target 'main' o el bloque de conexi├│n secundaria
  */
 function openSelector(target) {
     currentSelectorTarget = target;
@@ -1944,7 +1930,7 @@ function openSelector(target) {
         document.body.appendChild(modal);
     }
 
-    // Poblar filtros únicos
+    // Poblar filtros ├║nicos
     const cats = new Set([...db.equipos, ...db.cables].map(i => i.Categoria).filter(Boolean));
     const tips = new Set([...db.equipos, ...db.cables].map(i => i.Tipo || i.Nombre).filter(Boolean));
     const ubis = new Set([...db.equipos, ...db.cables].map(i => i.Ubicacion).filter(Boolean));
@@ -1960,7 +1946,7 @@ function openSelector(target) {
                        style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); border-radius:8px; color:white;">
                 <div class="filter-row">
                     <select id="selFilterCat" class="premium-select" style="font-size:0.8rem">
-                        <option value="">Categoría...</option>
+                        <option value="">Categor├¡a...</option>
                         ${Array.from(cats).sort().map(c => `<option value="${c}">${c}</option>`).join('')}
                     </select>
                     <select id="selFilterTip" class="premium-select" style="font-size:0.8rem">
@@ -1968,7 +1954,7 @@ function openSelector(target) {
                         ${Array.from(tips).sort().map(t => `<option value="${t}">${t}</option>`).join('')}
                     </select>
                     <select id="selFilterUbi" class="premium-select" style="font-size:0.8rem">
-                        <option value="">Ubicación...</option>
+                        <option value="">Ubicaci├│n...</option>
                         ${Array.from(ubis).sort().map(u => `<option value="${u}">${u}</option>`).join('')}
                     </select>
                 </div>
@@ -2048,8 +2034,8 @@ function selectItem(id, name) {
         
         // Trigger auto-ID for connections if in ruteo form
         const form = document.getElementById('activeAdminForm');
-        if (form && form.id === 'activeAdminForm') { // Ya está como activeAdminForm
-            // Actualizar todos los bloques vacíos de ID patch
+        if (form && form.id === 'activeAdminForm') { // Ya est├í como activeAdminForm
+            // Actualizar todos los bloques vac├¡os de ID patch
             form.querySelectorAll('.patch-block').forEach(block => {
                 updatePatchBlockId(block);
             });
@@ -2097,7 +2083,7 @@ function updatePatchBlockId(block) {
 }
 
 /**
- * Agrega una fila de conexión dinámica
+ * Agrega una fila de conexi├│n din├ímica
  * @param {string} direction 'entradas' o 'salidas'
  */
 function addPatchRow(direction) {
@@ -2119,66 +2105,22 @@ function togglePatchExtra(btn) {
 }
 
 /**
- * Abre el gestor de ruteo pre-seleccionando un equipo y cargando sus conexiones
+ * Abre el gestor de ruteo pre-seleccionando un equipo
  */
 function openBatchPatch(type, itemId) {
-    const item = getItemById(itemId);
-    if (!item) return;
-
-    // Cambiar al tab de conexiones
+    // Primero cambiamos al tab de conexiones
     const tabBtn = document.querySelector('.tab-btn[onclick*="tabRuteo"]');
     showAdminTab('tabRuteo', tabBtn);
     
-    // Abrir formulario
+    // Luego abrimos el formulario
     toggleAdminForm('conexiones');
     
-    // Pre-seleccionar el equipo principal
-    currentSelectorTarget = 'main';
-    selectItem(itemId, item.Nombre || item.Tipo || itemId);
-    
-    const form = document.getElementById('activeAdminForm');
-    if (!form) return;
-
-    // Marcar como edición para que el backend sepa que debe actualizar si existen
-    form.querySelector('[name="isEdit"]').value = 'true';
-
-    // Buscar conexiones existentes
-    const entradas = db.conexiones.filter(c => String(c.ID_Destino) === String(itemId));
-    const salidas = db.conexiones.filter(c => String(c.ID_Origen) === String(itemId));
-
-    // Guardar IDs originales para detectar borrados al guardar
-    originalBatchIds = [...entradas, ...salidas].map(c => String(c.ID_Patch));
-
-    // Poblar Entradas
-    entradas.forEach(conn => {
-        addPatchRow('entradas');
-        const lastBlock = form.querySelector('#container_entradas .patch-block:last-child');
-        fillPatchBlock(lastBlock, conn, 'entrada');
-    });
-
-    // Poblar Salidas
-    salidas.forEach(conn => {
-        addPatchRow('salidas');
-        const lastBlock = form.querySelector('#container_salidas .patch-block:last-child');
-        fillPatchBlock(lastBlock, conn, 'salida');
-    });
+    // Pre-seleccionamos el equipo
+    const item = getItemById(itemId);
+    if (item) {
+        selectItem(itemId, item.Nombre || item.Tipo);
+    }
 }
 
-function fillPatchBlock(block, conn, role) {
-    if (!block || !conn) return;
-    
-    const secId = role === 'entrada' ? conn.ID_Origen : conn.ID_Destino;
-    const secItem = getItemById(secId);
-    const secName = secItem ? (secItem.Nombre || secItem.Tipo) : secId;
-
-    block.querySelector('.sel-id').value = secId;
-    block.querySelector('.sel-label').innerText = `${secId} (${secName})`;
-    block.querySelector('.p-id').value = conn.ID_Patch;
-    block.querySelector('.p-ori').value = conn.Puerto_Origen;
-    block.querySelector('.p-des').value = conn.Puerto_Destino;
-    block.querySelector('.p-signal').value = conn.Tipo_Senial || '';
-    block.querySelector('.p-notes').value = conn.Notas || '';
-}
-
-// Inicialización de la aplicación
+// Inicializaci├│n de la aplicaci├│n
 init();

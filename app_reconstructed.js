@@ -1,0 +1,2 @@
+"// app.js - Main Application Logic\n// v112.3 - Robust DOM initialization\n\nlet db = { equipos: [], cables: [], conexiones: [] };\nlet currentMode = 'OPERACION';\nlet activeAdminForm = null;\nlet html5QrCode = null;\nlet isBatchPatching = false;\n\n// DO
+<truncated 9204 bytes>

@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Audio y Video Circuito ER2</title>
-    <link rel="stylesheet" href="styles.css?v=117.0">
+    <link rel="stylesheet" href="styles.css?v=76.0">
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +22,7 @@
             <button id="menuBtn" class="menu-btn"><span class="material-icons">menu</span></button>
             <h1 class="nav-title" id="activeModeDisplay">Cargando...</h1>
             <div style="display:flex; gap: 0.5rem; margin-left: auto;">
-                <span class="material-icons" id="offlineIcon" style="display:none; color: var(--danger); line-height: inherit; align-self: center;" title="Sin Conexión">cloud_off</span>
+                <span class="material-icons" id="offlineIcon" style="display:none; color: var(--danger); line-height: inherit; align-self: center;" title="Sin Conexi├│n">cloud_off</span>
                 <button class="icon-btn" id="refreshBtn" title="Actualizar base de datos" onclick="refreshDatabase()"><span class="material-icons">sync</span></button>
                 <button class="qr-btn" id="qrStartBtn" title="Escanear QR" style="width:auto; padding:0.4rem; border-radius:8px;"><span class="material-icons">qr_code_scanner</span></button>
                 <button class="qr-btn" id="searchToggleBtn" title="Buscar" style="width:auto; padding:0.4rem; border-radius:8px;"><span class="material-icons">search</span></button>
@@ -38,14 +38,14 @@
             </div>
             <div class="menu-section">
                 <h3>Vistas</h3>
-                <button class="menu-item" onclick="setMode('OPERACION')"><span class="material-icons">build_circle</span> Operación</button>
-                <button class="menu-item" onclick="setMode('ADMIN')"><span class="material-icons">admin_panel_settings</span> Administración</button>
+                <button class="menu-item" onclick="setMode('OPERACION')"><span class="material-icons">build_circle</span> Operaci├│n</button>
+                <button class="menu-item" onclick="setMode('ADMIN')"><span class="material-icons">admin_panel_settings</span> Administraci├│n</button>
                 <button class="menu-item" onclick="shareApp()"><span class="material-icons">share</span> Compartir</button>
             </div>
             <div class="menu-section">
                 <h3>Referencias</h3>
                 <div id="sidebarReferences">
-                    <!-- Dinámico -->
+                    <!-- Din├ímico -->
                 </div>
             </div>
         </div>
@@ -55,11 +55,11 @@
     <div id="qrModal" class="modal-overlay" style="display:none; z-index: 3000;">
         <div style="max-width: 500px; width: 100%; padding: 1.5rem; background: #1a1a1a; border: 1px solid var(--accent-cyan); border-radius: 16px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
-                <h3 style="margin:0; color:var(--accent-cyan);">Escanear código QR</h3>
+                <h3 style="margin:0; color:var(--accent-cyan);">Escanear c├│digo QR</h3>
                 <button id="closeQrBtn" class="close-btn" style="position:static;"><span class="material-icons">close</span></button>
             </div>
             <div id="reader" style="width:100%; min-height: 300px; background: #000; border-radius: 12px;"></div>
-            <p style="text-align:center; font-size:0.8rem; color:var(--text-secondary); margin-top:1rem;">Apunta con la cámara al código QR del equipo</p>
+            <p style="text-align:center; font-size:0.8rem; color:var(--text-secondary); margin-top:1rem;">Apunta con la c├ímara al c├│digo QR del equipo</p>
         </div>
     </div>
 
@@ -79,7 +79,7 @@
                 </div>
 
                 <div id="adminInventoryContainer">
-                    <!-- Se inyectará el mismo inventario que Operación pero con clics a edición -->
+                    <!-- Se inyectar├í el mismo inventario que Operaci├│n pero con clics a edici├│n -->
                 </div>
 
                 <!-- Admin Modal Overlay -->
@@ -116,10 +116,6 @@
 
         <form id="formEquipo" class="form-body-ficha">
             <input type="hidden" name="isEdit" value="false">
-            <div id="quickActionRuteo" style="display:none; margin-bottom:1rem; padding:0.8rem; background:var(--accent-purple-dim); border:1px solid var(--accent-purple); border-radius:8px; justify-content:space-between; align-items:center;">
-                <span style="font-size:0.85rem; font-weight:600;"><span class="material-icons" style="font-size:1rem; vertical-align:middle;">hub</span> Gestión de conexiones</span>
-                <button type="button" id="btnGoToRuteo_E" class="action-btn btn-mini" style="background:var(--accent-purple); color:white; border:none; padding:4px 10px;">Gestionar ruteo</button>
-            </div>
             <div class="form-group">
                 <label><span class="material-icons">qr_code</span> ID del equipo</label>
                 <input type="text" name="id" id="equip_id" placeholder="ej: XR-01" required>
@@ -129,11 +125,11 @@
                 <input type="text" name="nombre" id="equip_nombre" placeholder="ej: Consola XR12" required>
             </div>
             <div class="form-group">
-                <label><span class="material-icons">category</span> Categoría</label>
+                <label><span class="material-icons">category</span> Categor├¡a</label>
                 <input type="text" name="categoria" id="equip_cat" list="list_categorias" placeholder="ej: Audio">
             </div>
             <div class="form-group">
-                <label><span class="material-icons">location_on</span> Ubicación de uso</label>
+                <label><span class="material-icons">location_on</span> Ubicaci├│n de uso</label>
                 <input type="text" name="ubicacion" list="list_ubicaciones" placeholder="ej: FOH">
             </div>
             <div class="form-group">
@@ -153,10 +149,6 @@
 
         <form id="formCable" class="form-body-ficha">
             <input type="hidden" name="isEdit" value="false">
-            <div id="quickActionRuteoCable" style="display:none; margin-bottom:1rem; padding:0.8rem; background:var(--accent-purple-dim); border:1px solid var(--accent-purple); border-radius:8px; justify-content:space-between; align-items:center;">
-                <span style="font-size:0.85rem; font-weight:600;"><span class="material-icons" style="font-size:1rem; vertical-align:middle;">hub</span> Gestión de conexiones</span>
-                <button type="button" id="btnGoToRuteo_C" class="action-btn btn-mini" style="background:var(--accent-purple); color:white; border:none; padding:4px 10px;">Gestionar ruteo</button>
-            </div>
             <div class="form-group">
                 <label><span class="material-icons">qr_code</span> ID del cable</label>
                 <input type="text" name="id" id="cable_id" placeholder="ej: CBL-001" required>
@@ -170,11 +162,11 @@
                 <input type="number" name="largo" placeholder="ej: 10">
             </div>
             <div class="form-group">
-                <label><span class="material-icons">category</span> Categoría</label>
+                <label><span class="material-icons">category</span> Categor├¡a</label>
                 <input type="text" name="categoria" list="list_categorias" placeholder="ej: Cables audio">
             </div>
             <div class="form-group">
-                <label><span class="material-icons">location_on</span> Ubicación</label>
+                <label><span class="material-icons">location_on</span> Ubicaci├│n</label>
                 <input type="text" name="ubicacion" list="list_ubicaciones" placeholder="ej: Escenario">
             </div>
             <div class="form-group">
@@ -244,7 +236,7 @@
                     </div>
                 </div>
                 <div class="visual-patch-line">
-                    <input type="text" class="p-signal" placeholder="Tipo de señal" list="list_seniales">
+                    <input type="text" class="p-signal" placeholder="Tipo de se├▒al" list="list_seniales">
                 </div>
                 <div class="patch-expand-btn" onclick="togglePatchExtra(this)">
                     <span class="material-icons">expand_more</span>
@@ -278,7 +270,7 @@
     <div id="setupModal" class="setup-modal" style="display: none;">
         <div class="setup-content">
             <h3 style="margin-top:0">Conectar base de datos</h3>
-            <p style="font-size: 0.9rem; margin-bottom: 1rem; color:#aaa;">Ingresá el ID de tu Google Apps Script o la URL completa:</p>
+            <p style="font-size: 0.9rem; margin-bottom: 1rem; color:#aaa;">Ingres├í el ID de tu Google Apps Script o la URL completa:</p>
             <input type="text" id="gasIdInput" placeholder="AKfycb..." style="width:100%; padding: 0.8rem; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: #fff; margin-bottom: 1rem;">
             <button id="saveGasIdBtn" class="mode-btn active" style="width:100%; padding: 0.8rem; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Guardar e iniciar</button>
         </div>
@@ -309,7 +301,7 @@
 
     <!-- Floating Mode Toggle REMOVED -->
 
-    <script src="app.js?v=118.0"></script>
+    <script src="app.js?v=89.0"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
