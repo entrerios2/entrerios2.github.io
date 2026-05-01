@@ -3,13 +3,126 @@
  * Vanilla JS + Graph Traversal + PWA Sync
  */
 
+// --- Utilidades ---
+function escapeHTML(s) {
+    if (s === null || s === undefined) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function debounce(fn, delay) {
+    let t;
+    return function (...args) {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
+function showToast(message, type = 'info', duration = 3000) {
+    let host = document.getElementById('toastHost');
+    if (!host) {
+        host = document.createElement('div');
+        host.id = 'toastHost';
+        host.className = 'toast-host';
+        document.body.appendChild(host);
+    }
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.textContent = message;
+    host.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => {
+        el.classList.remove('show');
+        setTimeout(() => el.remove(), 200);
+    }, duration);
+}
+
+function alertModal(message, title = 'Aviso') {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay app-modal';
+        overlay.innerHTML = `
+            <div class="app-modal-card">
+                <h3 class="app-modal-title"></h3>
+                <p class="app-modal-msg"></p>
+                <div class="app-modal-actions">
+                    <button class="action-btn btn-primary" data-action="ok">Aceptar</button>
+                </div>
+            </div>`;
+        overlay.querySelector('.app-modal-title').textContent = title;
+        overlay.querySelector('.app-modal-msg').textContent = message;
+        document.body.appendChild(overlay);
+        const close = () => { overlay.remove(); resolve(); };
+        overlay.querySelector('[data-action=ok]').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    });
+}
+
+function confirmModal(message, title = 'Confirmar') {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay app-modal';
+        overlay.innerHTML = `
+            <div class="app-modal-card">
+                <h3 class="app-modal-title"></h3>
+                <p class="app-modal-msg"></p>
+                <div class="app-modal-actions">
+                    <button class="action-btn app-modal-cancel" data-action="cancel">Cancelar</button>
+                    <button class="action-btn btn-primary" data-action="ok">Aceptar</button>
+                </div>
+            </div>`;
+        overlay.querySelector('.app-modal-title').textContent = title;
+        overlay.querySelector('.app-modal-msg').textContent = message;
+        document.body.appendChild(overlay);
+        const close = (val) => { overlay.remove(); resolve(val); };
+        overlay.querySelector('[data-action=ok]').addEventListener('click', () => close(true));
+        overlay.querySelector('[data-action=cancel]').addEventListener('click', () => close(false));
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+    });
+}
+
+function inputModal(label, { title = 'Ingresar valor', placeholder = '', defaultValue = '' } = {}) {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay app-modal';
+        overlay.innerHTML = `
+            <div class="app-modal-card">
+                <h3 class="app-modal-title"></h3>
+                <label class="app-modal-label"></label>
+                <input type="text" class="app-modal-input" autocomplete="off">
+                <div class="app-modal-actions">
+                    <button class="action-btn app-modal-cancel" data-action="cancel">Cancelar</button>
+                    <button class="action-btn btn-primary" data-action="ok">Aceptar</button>
+                </div>
+            </div>`;
+        overlay.querySelector('.app-modal-title').textContent = title;
+        overlay.querySelector('.app-modal-label').textContent = label;
+        const input = overlay.querySelector('.app-modal-input');
+        input.placeholder = placeholder;
+        input.value = defaultValue;
+        document.body.appendChild(overlay);
+        setTimeout(() => input.focus(), 50);
+        const close = (val) => { overlay.remove(); resolve(val); };
+        overlay.querySelector('[data-action=ok]').addEventListener('click', () => close(input.value.trim()));
+        overlay.querySelector('[data-action=cancel]').addEventListener('click', () => close(null));
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') close(input.value.trim());
+            if (e.key === 'Escape') close(null);
+        });
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(null); });
+    });
+}
+
 let API_URL = "";
 
 // State
 let db = { equipos: [], cables: [], conexiones: [] };
-let currentMode = 'OPERACION'; 
+let currentMode = 'OPERACION';
 let techName = localStorage.getItem('tech_name') || "";
-let offlineQueue = JSON.parse(localStorage.getItem('av_tech_queue') || '[]');
 let currentSort = { type: '', column: '', direction: 'asc' };
 let selectedBranches = {}; // nodeId -> choiceId (for tree navigation)
 let treeMaxDepth = 1; // Default depth for tree expansion
@@ -103,11 +216,15 @@ document.getElementById('saveGasIdBtn')?.addEventListener('click', () => {
 
 async function startApp() {
     loadLocalData();
+    migrateOfflineQueue();
     updateOfflineStatus();
-    
+
     // Identidad
     if (!techName) {
-        techName = prompt("Ingrese su nombre para registrar los cambios:");
+        techName = await inputModal('Tu nombre quedará registrado en cada cambio.', {
+            title: 'Identificación',
+            placeholder: 'Ej: Juan Pérez'
+        });
         if (!techName) techName = "Técnico Anónimo";
         localStorage.setItem('tech_name', techName);
     }
@@ -340,9 +457,26 @@ function findFullRoute(targetId) {
  * 2.1 Utilidades de Búsqueda
  */
 function highlightText(text, query) {
-    if (!query) return text;
-    const regex = new RegExp(`(${query})`, 'gi');
-    return text.replace(regex, '<span class="search-highlight">$1</span>');
+    const safeText = escapeHTML(text);
+    if (!query) return safeText;
+    const escapedQuery = String(query).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+    return safeText.replace(regex, '<span class="search-highlight">$1</span>');
+}
+
+function migrateOfflineQueue() {
+    try {
+        const legacy = localStorage.getItem('av_tech_queue');
+        if (!legacy) return;
+        const legacyArr = JSON.parse(legacy);
+        if (Array.isArray(legacyArr) && legacyArr.length) {
+            const current = JSON.parse(localStorage.getItem('offline_queue') || '[]');
+            localStorage.setItem('offline_queue', JSON.stringify(current.concat(legacyArr)));
+        }
+        localStorage.removeItem('av_tech_queue');
+    } catch (e) {
+        localStorage.removeItem('av_tech_queue');
+    }
 }
 
 function getItemById(id) {
@@ -620,7 +754,7 @@ function renderResults(specificId = null, pushState = true) {
     });
 
     if (matches.length === 0) {
-        resultsContainer.innerHTML = `<div class="card" style="text-align:center">No se encontró "${rawQuery}"</div>`;
+        resultsContainer.innerHTML = `<div class="card" style="text-align:center">No se encontró "${escapeHTML(rawQuery)}"</div>`;
         return;
     }
 
@@ -1534,7 +1668,7 @@ async function handleFormSubmit(e, formId) {
 
     if (formId === 'formRuteo') {
         const mainId = form.querySelector('#main_id_input').value;
-        if (!mainId) { alert("Selecciona el equipo principal"); return; }
+        if (!mainId) { showToast("Selecciona el equipo principal", 'warning'); return; }
         
         const inputs = Array.from(form.querySelectorAll('#container_entradas .patch-block'));
         const outputs = Array.from(form.querySelectorAll('#container_salidas .patch-block'));
@@ -1547,7 +1681,7 @@ async function handleFormSubmit(e, formId) {
             try {
                 globalMetaStr = JSON.stringify(JSON.parse(editor.value));
             } catch(e) {
-                alert("Error en Metadatos JSON: " + e.message);
+                showToast("Error en Metadatos JSON: " + e.message, 'error', 5000);
                 return;
             }
         } else if (editor) {
@@ -1596,13 +1730,13 @@ async function handleFormSubmit(e, formId) {
                 await handleAction(action, payload);
             }
 
-            alert("Cambios guardados con éxito");
+            showToast("Cambios guardados con éxito", 'success');
             closeAdminModal();
             fetchData();
             return;
         } catch (err) {
             console.error("Error en ruteo por lotes:", err);
-            alert("Ocurrió un error al guardar.");
+            showToast("Ocurrió un error al guardar.", 'error', 5000);
         } finally {
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalBtnHTML;
@@ -1621,7 +1755,7 @@ async function handleFormSubmit(e, formId) {
                 const parsed = JSON.parse(body.metadatos_raw);
                 body.metadatos = JSON.stringify(parsed);
             } catch (e) {
-                alert("Error en Metadatos JSON: " + e.message);
+                showToast("Error en Metadatos JSON: " + e.message, 'error', 5000);
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalBtnHTML;
                 return;
@@ -1653,7 +1787,7 @@ async function handleFormSubmit(e, formId) {
         }
     } catch (e) {
         console.error("Error al guardar:", e);
-        alert("No se pudo completar la operación.");
+        showToast("No se pudo completar la operación.", 'error', 5000);
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnHTML;
@@ -1890,7 +2024,7 @@ function queueAction(action) {
     const queue = JSON.parse(localStorage.getItem('offline_queue') || '[]');
     queue.push(action);
     localStorage.setItem('offline_queue', JSON.stringify(queue));
-    alert('Sin conexión. La acción se sincronizará automáticamente al volver online.');
+    showToast('Sin conexión. Se sincronizará al volver online.', 'warning', 4000);
 }
 
 async function syncQueue() {
@@ -1898,15 +2032,21 @@ async function syncQueue() {
     if (queue.length === 0) return;
 
     console.log(`Syncing ${queue.length} actions...`);
+    const failed = [];
     for (const action of queue) {
         try {
             await sendToServer(action.action, action.body);
         } catch (e) {
             console.error('Failed to sync action', action);
+            failed.push(action);
         }
     }
-    localStorage.setItem('offline_queue', '[]');
-    alert('Sincronización completada con éxito.');
+    localStorage.setItem('offline_queue', JSON.stringify(failed));
+    if (failed.length === 0) {
+        showToast(`Sincronización completada (${queue.length}).`, 'success');
+    } else {
+        showToast(`Sincronización parcial: ${queue.length - failed.length} ok, ${failed.length} pendientes.`, 'warning', 5000);
+    }
 }
 
 /**
@@ -1946,7 +2086,7 @@ function setMode(mode, pushState = true) {
     }
 }
 
-function shareApp() {
+async function shareApp() {
     const url = new URL(window.location.origin + window.location.pathname);
     const gasUrl = localStorage.getItem('gas_api_url');
     if (gasUrl) {
@@ -1963,8 +2103,12 @@ function shareApp() {
             url: finalUrl
         }).catch(console.error);
     } else {
-        navigator.clipboard.writeText(finalUrl);
-        alert('URL copiada al portapapeles: ' + finalUrl);
+        try {
+            await navigator.clipboard.writeText(finalUrl);
+            showToast('URL copiada al portapapeles', 'success');
+        } catch (e) {
+            await alertModal(finalUrl, 'Copia esta URL');
+        }
     }
 }
 
@@ -2025,7 +2169,7 @@ qrStartBtn.addEventListener('click', async () => {
         isQrScanning = true;
     } catch (err) {
         console.error('QR Critical failure:', err);
-        alert('No se pudo iniciar la cámara. Asegúrate de dar permisos.');
+        showToast('No se pudo iniciar la cámara. Verificá permisos.', 'error', 5000);
         qrModal.style.display = 'none';
         isQrScanning = false;
     }
@@ -2045,7 +2189,7 @@ closeQrBtn.addEventListener('click', () => {
     }
 });
 
-searchInput.addEventListener('input', () => renderResults());
+searchInput.addEventListener('input', debounce(() => renderResults(), 180));
 
 window.addEventListener('online', () => {
     updateOfflineStatus();
