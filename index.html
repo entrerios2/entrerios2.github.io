@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Audio y Video Circuito ER2</title>
-    <link rel="stylesheet" href="styles.css?v=124.0">
+    <link rel="stylesheet" href="styles.css?v=127.0">
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -170,6 +170,25 @@
                 <label><span class="material-icons">notes</span> Notas</label>
                 <input type="text" name="notas" placeholder="Observaciones adicionales">
             </div>
+            <div class="metadata-section" style="grid-column: 1 / -1; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h4 style="margin:0; font-size:0.9rem; color:var(--accent-cyan);">Metadatos & Manuales</h4>
+                </div>
+                <div class="manuals-container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;"></div>
+                <button type="button" class="action-btn" style="width:100%; padding:8px; background:transparent; border:1px dashed var(--border-color); color:var(--text-secondary); border-radius:6px; cursor:pointer; margin-bottom:1rem; display:flex; align-items:center; justify-content:center; gap:4px;" onclick="addManualRow(this)">
+                    <span class="material-icons" style="font-size:1.1rem;">add</span> Añadir otro manual
+                </button>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label style="font-size: 0.8rem; color:var(--text-secondary);">¿Montado en otro equipo? (ID)</label>
+                    <input type="text" class="montado-input" placeholder="Ej: RACK-01" oninput="syncMetadataFromUI(this)">
+                </div>
+                <details class="premium-details mini">
+                    <summary style="font-size: 0.8rem; padding: 0.5rem;"><span class="material-icons chevron">expand_more</span> Editor JSON Avanzado</summary>
+                    <div class="details-content" style="padding:0; margin-top:0.5rem;">
+                        <textarea class="metadata-json-editor" name="metadatos_raw" style="font-family: monospace; width: 100%; min-height: 120px; background: #0d1117; color: #7ee787; padding: 0.8rem; border-radius: 6px; border: 1px solid #30363d; font-size: 0.8rem; resize: vertical;" placeholder='{"clave": "valor"}' onblur="validateAndFormatJSON(this)"></textarea>
+                    </div>
+                </details>
+            </div>
             <button type="submit" id="btnSubmitEquipo" class="action-btn btn-primary">Guardar equipo</button>
         </form>
 
@@ -211,6 +230,21 @@
                 <label><span class="material-icons">notes</span> Notas</label>
                 <input type="text" name="notas" placeholder="Observaciones">
             </div>
+            <div class="metadata-section" style="grid-column: 1 / -1; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h4 style="margin:0; font-size:0.9rem; color:var(--accent-cyan);">Metadatos & Manuales</h4>
+                </div>
+                <div class="manuals-container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;"></div>
+                <button type="button" class="action-btn" style="width:100%; padding:8px; background:transparent; border:1px dashed var(--border-color); color:var(--text-secondary); border-radius:6px; cursor:pointer; margin-bottom:1rem; display:flex; align-items:center; justify-content:center; gap:4px;" onclick="addManualRow(this)">
+                    <span class="material-icons" style="font-size:1.1rem;">add</span> Añadir otro manual
+                </button>
+                <details class="premium-details mini">
+                    <summary style="font-size: 0.8rem; padding: 0.5rem;"><span class="material-icons chevron">expand_more</span> Editor JSON Avanzado</summary>
+                    <div class="details-content" style="padding:0; margin-top:0.5rem;">
+                        <textarea class="metadata-json-editor" name="metadatos_raw" style="font-family: monospace; width: 100%; min-height: 120px; background: #0d1117; color: #7ee787; padding: 0.8rem; border-radius: 6px; border: 1px solid #30363d; font-size: 0.8rem; resize: vertical;" placeholder='{"clave": "valor"}' onblur="validateAndFormatJSON(this)"></textarea>
+                    </div>
+                </details>
+            </div>
             <button type="submit" id="btnSubmitCable" class="action-btn btn-primary">Guardar cable</button>
         </form>
 
@@ -242,6 +276,21 @@
                 <div id="container_salidas"></div>
             </div>
 
+            <div class="metadata-section" style="grid-column: 1 / -1; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 1rem; margin-top: 1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                    <h4 style="margin:0; font-size:0.9rem; color:var(--accent-cyan);">Metadatos & Manuales</h4>
+                </div>
+                <div class="manuals-container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.5rem;"></div>
+                <button type="button" class="action-btn" style="width:100%; padding:8px; background:transparent; border:1px dashed var(--border-color); color:var(--text-secondary); border-radius:6px; cursor:pointer; margin-bottom:1rem; display:flex; align-items:center; justify-content:center; gap:4px;" onclick="addManualRow(this)">
+                    <span class="material-icons" style="font-size:1.1rem;">add</span> Añadir otro manual
+                </button>
+                <details class="premium-details mini">
+                    <summary style="font-size: 0.8rem; padding: 0.5rem;"><span class="material-icons chevron">expand_more</span> Editor JSON Avanzado</summary>
+                    <div class="details-content" style="padding:0; margin-top:0.5rem;">
+                        <textarea class="metadata-json-editor" name="metadatos_raw" style="font-family: monospace; width: 100%; min-height: 120px; background: #0d1117; color: #7ee787; padding: 0.8rem; border-radius: 6px; border: 1px solid #30363d; font-size: 0.8rem; resize: vertical;" placeholder='{"clave": "valor"}' onblur="validateAndFormatJSON(this)"></textarea>
+                    </div>
+                </details>
+            </div>
             <button type="submit" id="btnSubmitRuteo" class="action-btn btn-primary" style="margin-top: 1rem;">Guardar todas las conexiones</button>
         </form>
 
@@ -331,8 +380,8 @@
 
     <!-- Floating Mode Toggle REMOVED -->
 
-    <script src="topology.js?v=124.0"></script>
-    <script src="app.js?v=124.0"></script>
+    <script src="topology.js?v=127.0"></script>
+    <script src="app.js?v=127.0"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

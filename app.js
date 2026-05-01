@@ -574,7 +574,9 @@ function mapToDb(body, type) {
     }
     
     // Preserve Metadata if editing
-    if (body.isEdit === 'true' || body.value) { // value indicates partial update usually
+    if (body.metadatos !== undefined) {
+        entry.Metadatos = body.metadatos;
+    } else if (body.isEdit === 'true' || body.value) { // value indicates partial update usually
         const idVal = body.id || body.id_patch;
         const oldItem = [...db.equipos, ...db.cables, ...db.conexiones].find(i => (i.ID_Equipo || i.ID_Cable || i.ID_Patch) === idVal);
         if (oldItem && oldItem.Metadatos) {
@@ -774,6 +776,31 @@ function renderTreeNode(id, isCentral, fixedInputConn = null, fixedOutputConn = 
         const estadoOpciones = ['En Uso', 'Guardado', 'Devuelto', 'Instalado', 'Preparado para instalar', 'Preparado para guardar'];
         const currentEstado = info?.Estado || 'Guardado';
         
+        let meta = { historial: [], notas: [] };
+        try { if (info?.Metadatos) meta = JSON.parse(info.Metadatos); } catch(e){}
+        const lastNote = meta.notas?.length > 0 ? meta.notas[meta.notas.length-1] : null;
+        const lastMove = meta.historial?.length > 0 ? meta.historial[meta.historial.length-1] : null;
+
+        // Render manuales and montado_en
+        let extraPills = '';
+        if (meta.montado_en) {
+            extraPills += `<div class="meta-pill" title="Montado en" style="cursor:pointer; background:var(--accent-purple-dim); border-color:var(--accent-purple);" onclick="renderResults('${meta.montado_en}')"><span class="material-icons" style="font-size:0.9rem">view_in_ar</span> Montado en: ${meta.montado_en}</div>`;
+        }
+        if (Array.isArray(meta.manuales)) {
+            meta.manuales.forEach(m => {
+                extraPills += `<div class="meta-pill" title="Manual"><a href="${m.url}" target="_blank" style="color:inherit; text-decoration:none; display:flex; align-items:center; gap:4px;"><span class="material-icons" style="font-size:0.9rem">menu_book</span> ${m.nombre || 'Enlace'}</a></div>`;
+            });
+        }
+        
+        let customJSONHtml = '';
+        const customKeysHtml = renderNestedJSON(meta, ['historial', 'notas', 'manuales', 'montado_en']);
+        if (customKeysHtml) {
+            customJSONHtml = `<div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:8px; margin-bottom:15px; border:1px solid #30363d;">
+                <div style="color:var(--accent-cyan); font-size:0.8rem; font-weight:600; margin-bottom:8px; text-transform:uppercase;"><span class="material-icons" style="font-size:1rem; vertical-align:middle;">data_object</span> Detalles Avanzados</div>
+                ${customKeysHtml}
+            </div>`;
+        }
+        
         el.insertAdjacentHTML('beforeend', `
             <button class="close-ficha-btn" style="right: 50px; color: var(--accent-cyan);" onclick="verEnMapa('${id}')" title="Ver en mapa"><span class="material-icons">my_location</span></button>
             <button class="close-ficha-btn" onclick="clearSearch()" title="Cerrar"><span class="material-icons">close</span></button>
@@ -793,7 +820,10 @@ function renderTreeNode(id, isCentral, fixedInputConn = null, fixedOutputConn = 
                     ${info?.Largo ? `<div class="meta-pill" title="Largo"><span class="material-icons" style="font-size:0.9rem">straighten</span> ${info.Largo}m</div>` : ''}
                 ` : ''}
                 ${info?.Notas ? `<div class="meta-pill" title="Notas Tabla"><span class="material-icons" style="font-size:0.9rem">description</span> ${info.Notas}</div>` : ''}
+                ${extraPills}
             </div>
+
+            ${customJSONHtml}
 
             <div style="margin-top:10px; margin-bottom:15px;">
                 <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:4px;">Estado:</label>
@@ -805,52 +835,43 @@ function renderTreeNode(id, isCentral, fixedInputConn = null, fixedOutputConn = 
                 </div>
             </div>
 
-            ${(() => {
-                let meta = { historial: [], notas: [] };
-                try { if (info?.Metadatos) meta = JSON.parse(info.Metadatos); } catch(e){}
-                const lastNote = meta.notas.length > 0 ? meta.notas[meta.notas.length-1] : null;
-                const lastMove = meta.historial.length > 0 ? meta.historial[meta.historial.length-1] : null;
-                
-                return `
-                                <details class="premium-details mini">
-                        <summary>
-                            <span class="material-icons chevron">expand_more</span>
-                            <span class="material-icons" style="font-size:1rem; color:var(--accent-cyan)">chat</span>
-                            ${lastNote ? `<span style="font-size:0.75rem"><b>${formatRelativeDate(lastNote.timestamp)}</b> ${lastNote.detalle}</span>` : '<span style="font-size:0.75rem; color:var(--text-secondary)">Sin notas</span>'}
-                        </summary>
-                        <div class="details-content notes-list">
-                            <div class="add-note-box">
-                                <textarea id="note_input_${id}" placeholder="Escribe una nota..."></textarea>
-                                <button class="action-btn btn-primary btn-mini" onclick="addNote('${id}')">Agregar nota</button>
-                            </div>
-                            ${meta.notas.slice().reverse().map(n => `
-                                <div class="trace-entry">
-                                    <span class="trace-date">${formatRelativeDate(n.timestamp)}</span>
-                                    <span class="trace-user">${n.nombre}:</span>
-                                    <span class="trace-detail">${n.detalle}</span>
-                                </div>
-                            `).join('')}
+            <details class="premium-details mini">
+                <summary>
+                    <span class="material-icons chevron">expand_more</span>
+                    <span class="material-icons" style="font-size:1rem; color:var(--accent-cyan)">chat</span>
+                    ${lastNote ? `<span style="font-size:0.75rem"><b>${formatRelativeDate(lastNote.timestamp)}</b> ${lastNote.detalle}</span>` : '<span style="font-size:0.75rem; color:var(--text-secondary)">Sin notas</span>'}
+                </summary>
+                <div class="details-content notes-list">
+                    <div class="add-note-box">
+                        <textarea id="note_input_${id}" placeholder="Escribe una nota..."></textarea>
+                        <button class="action-btn btn-primary btn-mini" onclick="addNote('${id}')">Agregar nota</button>
+                    </div>
+                    ${meta.notas ? meta.notas.slice().reverse().map(n => `
+                        <div class="trace-entry">
+                            <span class="trace-date">${formatRelativeDate(n.timestamp)}</span>
+                            <span class="trace-user">${n.nombre}:</span>
+                            <span class="trace-detail">${n.detalle}</span>
                         </div>
-                    </details>
+                    `).join('') : ''}
+                </div>
+            </details>
 
-                    <details class="premium-details mini">
-                        <summary>
-                            <span class="material-icons chevron">expand_more</span>
-                            <span class="material-icons" style="font-size:1rem; color:var(--accent-cyan)">history</span>
-                            ${lastMove ? `<span style="font-size:0.75rem"><b>${formatRelativeDate(lastMove.timestamp)}</b> ${lastMove.detalle}</span>` : '<span style="font-size:0.75rem; color:var(--text-secondary)">Sin movimientos</span>'}
-                        </summary>
-                        <div class="details-content history-list">
-                            ${meta.historial.slice().reverse().map(h => `
-                                <div class="trace-entry">
-                                    <span class="trace-date">${formatRelativeDate(h.timestamp)}</span>
-                                    <span class="trace-user">${h.nombre}:</span>
-                                    <span class="trace-detail">${h.detalle}</span>
-                                </div>
-                            `).join('')}
+            <details class="premium-details mini">
+                <summary>
+                    <span class="material-icons chevron">expand_more</span>
+                    <span class="material-icons" style="font-size:1rem; color:var(--accent-cyan)">history</span>
+                    ${lastMove ? `<span style="font-size:0.75rem"><b>${formatRelativeDate(lastMove.timestamp)}</b> ${lastMove.detalle}</span>` : '<span style="font-size:0.75rem; color:var(--text-secondary)">Sin movimientos</span>'}
+                </summary>
+                <div class="details-content history-list">
+                    ${meta.historial ? meta.historial.slice().reverse().map(h => `
+                        <div class="trace-entry">
+                            <span class="trace-date">${formatRelativeDate(h.timestamp)}</span>
+                            <span class="trace-user">${h.nombre}:</span>
+                            <span class="trace-detail">${h.detalle}</span>
                         </div>
-                    </details>
-                `;
-            })()}
+                    `).join('') : ''}
+                </div>
+            </details>
 
             <div class="port-list-container">
                 <div class="port-column">
@@ -877,6 +898,31 @@ function renderTreeNode(id, isCentral, fixedInputConn = null, fixedOutputConn = 
     }
 
     return el;
+}
+
+function renderNestedJSON(obj, excludedKeys = []) {
+    if (!obj || typeof obj !== 'object') return '';
+    let html = '';
+    for (const [key, val] of Object.entries(obj)) {
+        if (excludedKeys.includes(key)) continue;
+        if (val && typeof val === 'object' && !Array.isArray(val)) {
+            html += `<div style="margin-top: 6px; padding-left: 10px; border-left: 2px solid #444;">
+                        <strong style="color:var(--text-secondary); font-size:0.8rem; text-transform:capitalize;">${key}</strong>
+                        ${renderNestedJSON(val)}
+                     </div>`;
+        } else if (Array.isArray(val)) {
+            html += `<div style="margin-top: 6px; display:flex; gap:8px;">
+                        <strong style="color:var(--text-secondary); font-size:0.8rem; text-transform:capitalize;">${key}:</strong> 
+                        <span style="font-size:0.85rem; background:#111; padding:2px 6px; border-radius:4px; font-family:monospace;">[ ${val.join(', ')} ]</span>
+                     </div>`;
+        } else {
+            html += `<div style="margin-top: 6px; display:flex; gap:8px;">
+                        <strong style="color:var(--text-secondary); font-size:0.8rem; text-transform:capitalize;">${key}:</strong> 
+                        <span style="font-size:0.85rem;">${val}</span>
+                     </div>`;
+        }
+    }
+    return html;
 }
 
 function renderPortListEntry(conn, type) {
@@ -1220,6 +1266,14 @@ function toggleAdminForm(type) {
         form.querySelector('#container_salidas').innerHTML = '';
     }
 
+    // Reset Metadata
+    const editor = form.querySelector('.metadata-json-editor');
+    if (editor) editor.value = '';
+    const manualsContainer = form.querySelector('.manuals-container');
+    if (manualsContainer) manualsContainer.innerHTML = '';
+    const montadoInput = form.querySelector('.montado-input');
+    if (montadoInput) montadoInput.value = '';
+
     // Re-vincular listeners de Auto-ID
     if (type === 'equipos') {
         const catIn = form.querySelector('[name="categoria"]');
@@ -1320,11 +1374,150 @@ function editItem(type, id) {
         }
     }
 
+    // Cargar Metadatos
+    const editor = form.querySelector('.metadata-json-editor');
+    if (editor) {
+        let metaObj = {};
+        if (item.Metadatos) {
+            try { metaObj = JSON.parse(item.Metadatos); } catch(e){}
+        }
+        if (Object.keys(metaObj).length > 0) {
+            editor.value = JSON.stringify(metaObj, null, 2);
+            syncUIFromMetadata(form, metaObj);
+        } else {
+            editor.value = '';
+        }
+    }
+
     formContainerInner.innerHTML = '';
     formContainerInner.appendChild(form);
     document.getElementById('adminModal').style.display = 'flex';
 
     form.addEventListener('submit', (e) => handleFormSubmit(e, formId));
+}
+
+// === Metadata UI Sync Functions ===
+function addManualRow(btn) {
+    const container = btn.closest('.metadata-section').querySelector('.manuals-container');
+    const row = document.createElement('div');
+    row.className = 'manual-entry-card';
+    row.style.cssText = 'display:flex; flex-direction:column; gap:8px; padding:10px; background:var(--surface-2); border:1px solid #30363d; border-radius:8px; margin-bottom:8px;';
+    row.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:0.8rem; color:var(--accent-cyan); font-weight:600; display:flex; align-items:center; gap:4px;"><span class="material-icons" style="font-size:1rem;">menu_book</span> Documento / Enlace</span>
+            <button type="button" class="icon-btn" style="color:var(--danger); padding:2px;" onclick="this.closest('.manual-entry-card').remove(); syncMetadataFromUI(document.getElementById('activeAdminForm'))" title="Eliminar"><span class="material-icons" style="font-size:1.2rem;">delete</span></button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; align-items:center; background:rgba(0,0,0,0.3); border:1px solid #444; border-radius:6px; overflow:hidden;">
+                <span class="material-icons" style="padding:6px 8px; color:#888; font-size:1.1rem; background:#111; border-right:1px solid #444;">title</span>
+                <input type="text" placeholder="Ej: Manual de Usuario" style="flex:1; border:none; background:transparent; color:#fff; padding:8px; outline:none; font-size:0.85rem;" oninput="syncMetadataFromUI(this)">
+            </div>
+            <div style="display:flex; align-items:center; background:rgba(0,0,0,0.3); border:1px solid #444; border-radius:6px; overflow:hidden;">
+                <span class="material-icons" style="padding:6px 8px; color:#888; font-size:1.1rem; background:#111; border-right:1px solid #444;">link</span>
+                <input type="url" placeholder="https://..." style="flex:1; border:none; background:transparent; color:#fff; padding:8px; outline:none; font-size:0.85rem;" oninput="syncMetadataFromUI(this)">
+            </div>
+        </div>
+    `;
+    container.appendChild(row);
+}
+
+function syncMetadataFromUI(context) {
+    const section = context.closest ? context.closest('.metadata-section') : context.querySelector('.metadata-section');
+    if (!section) return;
+    const editor = section.querySelector('.metadata-json-editor');
+    if (!editor) return;
+
+    let meta = {};
+    try {
+        if (editor.value.trim()) meta = JSON.parse(editor.value);
+    } catch(e) {}
+
+    // Montado en
+    const montadoInput = section.querySelector('.montado-input');
+    if (montadoInput) {
+        if (montadoInput.value.trim()) {
+            meta.montado_en = montadoInput.value.trim();
+        } else {
+            delete meta.montado_en;
+        }
+    }
+
+    // Manuales
+    const manualRows = section.querySelectorAll('.manuals-container > div');
+    const manuales = [];
+    manualRows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const nombre = inputs[0].value.trim();
+        const url = inputs[1].value.trim();
+        if (nombre || url) manuales.push({ nombre, url });
+    });
+
+    if (manuales.length > 0) {
+        meta.manuales = manuales;
+    } else {
+        delete meta.manuales;
+    }
+
+    if (Object.keys(meta).length > 0) {
+        editor.value = JSON.stringify(meta, null, 2);
+    } else {
+        editor.value = '';
+    }
+    editor.style.borderColor = '#30363d';
+}
+
+function syncUIFromMetadata(form, jsonObj) {
+    const section = form.querySelector('.metadata-section');
+    if (!section) return;
+
+    // Montado en
+    const montadoInput = section.querySelector('.montado-input');
+    if (montadoInput) {
+        montadoInput.value = jsonObj.montado_en || '';
+    }
+
+    // Manuales
+    const container = section.querySelector('.manuals-container');
+    container.innerHTML = '';
+    if (Array.isArray(jsonObj.manuales)) {
+        jsonObj.manuales.forEach(m => {
+            const row = document.createElement('div');
+            row.className = 'manual-entry-card';
+            row.style.cssText = 'display:flex; flex-direction:column; gap:8px; padding:10px; background:var(--surface-2); border:1px solid #30363d; border-radius:8px; margin-bottom:8px;';
+            row.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.8rem; color:var(--accent-cyan); font-weight:600; display:flex; align-items:center; gap:4px;"><span class="material-icons" style="font-size:1rem;">menu_book</span> Documento / Enlace</span>
+                    <button type="button" class="icon-btn" style="color:var(--danger); padding:2px;" onclick="this.closest('.manual-entry-card').remove(); syncMetadataFromUI(document.getElementById('activeAdminForm'))" title="Eliminar"><span class="material-icons" style="font-size:1.2rem;">delete</span></button>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <div style="display:flex; align-items:center; background:rgba(0,0,0,0.3); border:1px solid #444; border-radius:6px; overflow:hidden;">
+                        <span class="material-icons" style="padding:6px 8px; color:#888; font-size:1.1rem; background:#111; border-right:1px solid #444;">title</span>
+                        <input type="text" placeholder="Ej: Manual de Usuario" value="${m.nombre || ''}" style="flex:1; border:none; background:transparent; color:#fff; padding:8px; outline:none; font-size:0.85rem;" oninput="syncMetadataFromUI(this)">
+                    </div>
+                    <div style="display:flex; align-items:center; background:rgba(0,0,0,0.3); border:1px solid #444; border-radius:6px; overflow:hidden;">
+                        <span class="material-icons" style="padding:6px 8px; color:#888; font-size:1.1rem; background:#111; border-right:1px solid #444;">link</span>
+                        <input type="url" placeholder="https://..." value="${m.url || ''}" style="flex:1; border:none; background:transparent; color:#fff; padding:8px; outline:none; font-size:0.85rem;" oninput="syncMetadataFromUI(this)">
+                    </div>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+    }
+}
+
+function validateAndFormatJSON(textarea) {
+    if (!textarea.value.trim()) {
+        textarea.style.borderColor = '#30363d';
+        return;
+    }
+    try {
+        const parsed = JSON.parse(textarea.value);
+        textarea.value = JSON.stringify(parsed, null, 2);
+        textarea.style.borderColor = '#30363d';
+        syncUIFromMetadata(textarea.closest('form'), parsed);
+    } catch (e) {
+        textarea.style.borderColor = 'red';
+    }
 }
 
 async function handleFormSubmit(e, formId) {
@@ -1340,6 +1533,20 @@ async function handleFormSubmit(e, formId) {
         const inputs = Array.from(form.querySelectorAll('#container_entradas .patch-block'));
         const outputs = Array.from(form.querySelectorAll('#container_salidas .patch-block'));
         const currentBatchIds = Array.from(form.querySelectorAll('.p-id')).map(el => el.value).filter(Boolean);
+
+        // Parse global metadata
+        let globalMetaStr = undefined;
+        const editor = form.querySelector('.metadata-json-editor');
+        if (editor && editor.value.trim()) {
+            try {
+                globalMetaStr = JSON.stringify(JSON.parse(editor.value));
+            } catch(e) {
+                alert("Error en Metadatos JSON: " + e.message);
+                return;
+            }
+        } else if (editor) {
+            globalMetaStr = '';
+        }
 
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<span class="spinner spinner-sm"></span> Guardando...';
@@ -1370,6 +1577,10 @@ async function handleFormSubmit(e, formId) {
                     notas: b.querySelector('.p-notes').value,
                     estado: 'Desconectado'
                 };
+                
+                if (globalMetaStr !== undefined) {
+                    payload.metadatos = globalMetaStr;
+                }
 
                 // Decidir si es ADD o EDIT basado en si el ID ya existía en la DB original
                 const exists = originalBatchIds.includes(idP) || db.conexiones.some(c => String(c.ID_Patch) === String(idP));
@@ -1396,6 +1607,24 @@ async function handleFormSubmit(e, formId) {
     const formData = new FormData(form);
     const body = Object.fromEntries(formData.entries());
     const isEdit = body.isEdit === 'true';
+
+    // Parse metadatos_raw if present
+    if (body.metadatos_raw !== undefined) {
+        if (body.metadatos_raw.trim()) {
+            try {
+                const parsed = JSON.parse(body.metadatos_raw);
+                body.metadatos = JSON.stringify(parsed);
+            } catch (e) {
+                alert("Error en Metadatos JSON: " + e.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHTML;
+                return;
+            }
+        } else {
+            body.metadatos = '';
+        }
+        delete body.metadatos_raw;
+    }
 
     let action = '';
     if (formId === 'formEquipo') {
