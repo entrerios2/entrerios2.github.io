@@ -90,6 +90,27 @@ function renderMapTopology() {
         connecting: { enabled: false }
     });
 
+    // Manual Pinch-to-Zoom for Mobile
+    let initialDist = 0;
+    container.addEventListener('touchstart', e => {
+        if (e.touches.length === 2) {
+            initialDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+        }
+    }, { passive: false });
+    container.addEventListener('touchmove', e => {
+        if (e.touches.length === 2 && initialDist > 0) {
+            e.preventDefault();
+            const currentDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+            const diff = currentDist - initialDist;
+            if (Math.abs(diff) > 2) {
+                const factor = diff > 0 ? 0.04 : -0.04;
+                x6Graph.zoom(factor);
+                initialDist = currentDist;
+            }
+        }
+    }, { passive: false });
+    container.addEventListener('touchend', () => { initialDist = 0; });
+
     // 4 — Port groups (Square shape, border color)
     const PORT_GROUPS = {
         'in-left': {
@@ -542,11 +563,17 @@ function renderMapTopology() {
 }
 
 function updateMapFilterUI() {
-    const filterPanel = document.getElementById('mapFilterContent');
+    const filterContent = document.getElementById('mapFilterContent');
     const toggle = document.getElementById('mapFilterToggle');
-    if (!filterPanel || !toggle) return;
+    if (!filterContent || !toggle) return;
     
-    toggle.onclick = () => { filterPanel.style.display = filterPanel.style.display === 'none' ? 'block' : 'none'; };
+    toggle.onclick = (e) => {
+        e.stopPropagation();
+        const isHidden = filterContent.style.display === 'none';
+        filterContent.style.display = isHidden ? 'block' : 'none';
+        toggle.style.background = isHidden ? 'var(--accent-cyan)' : 'rgba(22, 27, 34, 0.9)';
+        toggle.style.color = isHidden ? '#000' : '#fff';
+    };
     
     const signals = [...new Set(db.conexiones.map(c => c.Tipo_Senial))].filter(Boolean).sort();
     const locs = [...new Set([...db.equipos, ...db.cables].map(i => i.Ubicacion))].filter(Boolean).sort();
@@ -579,26 +606,22 @@ function updateMapFilterUI() {
             </select>`;
     }
 
-    if (!document.getElementById('filterDisconnectedWrap')) {
-        const wrap = document.createElement('div');
-        wrap.id = 'filterDisconnectedWrap';
-        wrap.style.marginTop = '12px';
-        if (filterCategoria && filterCategoria.parentNode) {
-            filterCategoria.parentNode.appendChild(wrap);
-        }
-    }
-    const wrapEl = document.getElementById('filterDisconnectedWrap');
-    if (wrapEl) {
-        wrapEl.innerHTML = `
+    const filterDisc = document.getElementById('filterDisconnected');
+    if (filterDisc) {
+        filterDisc.innerHTML = `
             <label style="display:flex; align-items:center; font-size:0.85rem; color:#ccc; cursor:pointer;">
                 <input type="checkbox" onchange="activeMapFilters.showDisconnected = this.checked; renderMapTopology()" ${activeMapFilters.showDisconnected ? 'checked' : ''} style="margin-right:8px;">
                 Mostrar sueltos
-            </label>
-            <label style="display:flex; align-items:center; font-size:0.85rem; color:#ccc; cursor:pointer; margin-top:8px;">
+            </label>`;
+    }
+
+    const filterDirect = document.getElementById('filterDirectLines');
+    if (filterDirect) {
+        filterDirect.innerHTML = `
+            <label style="display:flex; align-items:center; font-size:0.85rem; color:#ccc; cursor:pointer;">
                 <input type="checkbox" onchange="activeMapFilters.directLines = this.checked; renderMapTopology()" ${activeMapFilters.directLines ? 'checked' : ''} style="margin-right:8px;">
                 Líneas directas
-            </label>
-        `;
+            </label>`;
     }
 }
 
@@ -613,4 +636,17 @@ function verEnMapa(id) {
         const cell = x6Graph.getCellById(id);
         if (cell) { x6Graph.centerCell(cell); x6Graph.zoom(1.5); }
     }, 150);
+}
+function zoomMap(factor) {
+    if (x6Graph) {
+        const currentZoom = x6Graph.zoom();
+        x6Graph.zoom(factor);
+    }
+}
+
+function resetMapZoom() {
+    if (x6Graph) {
+        x6Graph.zoomToFit({ padding: 40, maxScale: 1 });
+        x6Graph.centerContent();
+    }
 }

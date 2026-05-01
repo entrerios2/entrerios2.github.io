@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audio y Video Circuito ER2</title>
-    <link rel="stylesheet" href="styles.css?v=128.0">
+    <link rel="stylesheet" href="styles.css?v=130.0">
     <link rel="manifest" href="manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,19 +22,30 @@
 <body>
     <!-- Map View Layer -->
     <div id="mapView" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0d1117; z-index: 1;">
-        <div id="mapFilterPanel" style="position: absolute; top: 80px; left: 20px; z-index: 10; background: rgba(22, 27, 34, 0.9); backdrop-filter: blur(10px); border: 1px solid #30363d; border-radius: 12px; padding: 12px; width: 220px; color: #fff; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
-                <h4 style="margin:0; font-family:Outfit; font-size:0.9rem; display:flex; align-items:center; gap:8px;"><span class="material-icons" style="font-size:1.1rem; color:var(--accent-cyan)">filter_list</span> Filtros</h4>
-                <button onclick="clearMapFilters()" class="icon-btn" style="padding:2px;" title="Limpiar"><span class="material-icons" style="font-size:1rem;">restart_alt</span></button>
-            </div>
-            <div id="mapFilterToggle" style="cursor:pointer; display:none; text-align:center; padding:4px; border-top:1px solid #333;"><span class="material-icons">expand_more</span></div>
-            <div id="mapFilterContent" style="display:flex; flex-direction:column; gap:12px;">
-                <div id="filterSignal"></div>
-                <div id="filterUbicacion"></div>
-                <div id="filterCategoria"></div>
+        <div id="mapFilterPanel" style="position: absolute; top: 80px; left: 20px; z-index: 10;">
+            <button id="mapFilterToggle" class="icon-btn" style="width: 44px; height: 44px; border-radius: 50%; background: rgba(22, 27, 34, 0.9); border: 1px solid #30363d; backdrop-filter: blur(10px); color: #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+                <span class="material-icons">filter_list</span>
+            </button>
+            <div id="mapFilterContent" style="display: none; margin-top: 10px; background: rgba(22, 27, 34, 0.9); backdrop-filter: blur(10px); border: 1px solid #30363d; border-radius: 12px; padding: 12px; width: 220px; color: #fff; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                    <h4 style="margin:0; font-family:Outfit; font-size:0.9rem; color:var(--accent-cyan);">Filtros</h4>
+                    <button onclick="clearMapFilters()" class="icon-btn" style="padding:2px;" title="Limpiar"><span class="material-icons" style="font-size:1rem;">restart_alt</span></button>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:12px;">
+                    <div id="filterSignal"></div>
+                    <div id="filterUbicacion"></div>
+                    <div id="filterCategoria"></div>
+                    <div id="filterDisconnected"></div>
+                    <div id="filterDirectLines"></div>
+                </div>
             </div>
         </div>
         <div id="cy" style="width: 100%; height: 100%; touch-action: none;"></div>
+        <div id="mapZoomControls" style="position: absolute; bottom: 30px; right: 20px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
+            <button class="icon-btn zoom-btn" onclick="zoomMap(0.2)" title="Acercar" style="background: rgba(22, 27, 34, 0.9); border: 1px solid #30363d; border-radius: 8px; width: 44px; height: 44px; color: #fff; display: flex; align-items: center; justify-content: center;"><span class="material-icons">add</span></button>
+            <button class="icon-btn zoom-btn" onclick="zoomMap(-0.2)" title="Alejar" style="background: rgba(22, 27, 34, 0.9); border: 1px solid #30363d; border-radius: 8px; width: 44px; height: 44px; color: #fff; display: flex; align-items: center; justify-content: center;"><span class="material-icons">remove</span></button>
+            <button class="icon-btn zoom-btn" onclick="resetMapZoom()" title="Centrar" style="background: rgba(22, 27, 34, 0.9); border: 1px solid #30363d; border-radius: 8px; width: 44px; height: 44px; color: #fff; margin-top: 4px; display: flex; align-items: center; justify-content: center;"><span class="material-icons">center_focus_strong</span></button>
+        </div>
         <div id="mapTooltip" style="display:none; position:fixed; background:rgba(0,0,0,0.85); color:#fff; padding:8px 12px; border-radius:6px; font-size:12px; z-index:1000; pointer-events:none; border:1px solid #444; backdrop-filter:blur(4px);"></div>
     </div>
 
@@ -380,8 +391,8 @@
 
     <!-- Floating Mode Toggle REMOVED -->
 
-    <script src="topology.js?v=128.0"></script>
-    <script src="app.js?v=128.0"></script>
+    <script src="topology.js?v=130.0"></script>
+    <script src="app.js?v=130.0"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
