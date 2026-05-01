@@ -1415,7 +1415,7 @@ async function handleUpdateLogisticaOld(id, value) {
 }
 
 async function handleAction(action, body) {
-    const originalText = searchInput.placeholder;
+    const originalText = "Busca ID o nombre...";
     searchInput.placeholder = "Sincronizando...";
     
     // Actualización optimista del estado local
@@ -1449,7 +1449,11 @@ async function handleAction(action, body) {
         try {
             await sendToServer(action, body);
             searchInput.placeholder = "¡Guardado!";
-            setTimeout(() => searchInput.placeholder = originalText, 2000);
+            setTimeout(() => {
+                if (searchInput.placeholder === "¡Guardado!") {
+                    searchInput.placeholder = originalText;
+                }
+            }, 2000);
             return true;
         } catch (e) {
             console.error("Fetch failed in handleAction, queueing offline:", e);
