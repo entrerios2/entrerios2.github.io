@@ -16,7 +16,7 @@
  */
 
 let x6Graph = null;
-let activeMapFilters = { signal: null, ubicacion: null, categoria: null };
+let activeMapFilters = { signal: null, ubicacion: null, categoria: null, showDisconnected: false };
 
 function openConnectionModal(conn) {
     if (!conn) return;
@@ -62,8 +62,9 @@ function renderMapTopology() {
                     sourcePort: entrada.ID_Patch + '-out',
                     targetPort: salida.ID_Patch + '-in',
                     portSrc: entrada.Puerto_Origen, portDst: salida.Puerto_Destino,
+                    portSrcCable: entrada.Puerto_Destino, portDstCable: salida.Puerto_Origen,
                     cableId: cable.ID_Cable,
-                    cableLabel: `${cable.Tipo || ''} ${cable.Largo ? cable.Largo + 'm' : ''}`.trim(),
+                    cableLabel: cable.Tipo || '',
                     signal: entrada.Tipo_Senial || salida.Tipo_Senial,
                     color: getSignalColor(entrada.Tipo_Senial || salida.Tipo_Senial),
                     status: entrada.Estado
@@ -89,38 +90,22 @@ function renderMapTopology() {
         connecting: { enabled: false }
     });
 
-    // 4 — Port groups (Triangle=In, Circle=Out)
+    // 4 — Port groups (Square shape, border color)
     const PORT_GROUPS = {
         'in-left': {
             position: 'left',
-            markup: [{ tagName: 'path', selector: 'portShape' }, { tagName: 'text', selector: 'portLabel' }],
+            markup: [{ tagName: 'rect', selector: 'portShape' }, { tagName: 'text', selector: 'portLabel' }],
             attrs: {
-                portShape: { d: 'M 8 -5 0 0 8 5 Z', fill: '#f85149', stroke: 'none', refX: -4 },
-                portLabel: { fontSize: 7, fill: '#ccc', textAnchor: 'end', refX: -12, refY: 3 }
-            }
-        },
-        'in-top': {
-            position: 'top',
-            markup: [{ tagName: 'path', selector: 'portShape' }, { tagName: 'text', selector: 'portLabel' }],
-            attrs: {
-                portShape: { d: 'M -5 8 0 0 5 8 Z', fill: '#f85149', stroke: 'none', refY: -4 },
-                portLabel: { fontSize: 7, fill: '#ccc', textAnchor: 'middle', refY: -14 }
+                portShape: { width: 8, height: 8, x: -4, y: -4, fill: '#161b22', stroke: 'var(--accent-cyan)', strokeWidth: 1 },
+                portLabel: { fontSize: 8, fill: '#ccc', textAnchor: 'start', refX: 8, refY: 3 }
             }
         },
         'out-right': {
             position: 'right',
-            markup: [{ tagName: 'circle', selector: 'portShape' }, { tagName: 'text', selector: 'portLabel' }],
+            markup: [{ tagName: 'rect', selector: 'portShape' }, { tagName: 'text', selector: 'portLabel' }],
             attrs: {
-                portShape: { r: 5, fill: '#f85149', stroke: 'none' },
-                portLabel: { fontSize: 7, fill: '#ccc', textAnchor: 'start', refX: 9, refY: 3 }
-            }
-        },
-        'out-bottom': {
-            position: 'bottom',
-            markup: [{ tagName: 'circle', selector: 'portShape' }, { tagName: 'text', selector: 'portLabel' }],
-            attrs: {
-                portShape: { r: 5, fill: '#f85149', stroke: 'none' },
-                portLabel: { fontSize: 7, fill: '#ccc', textAnchor: 'middle', refY: 10 }
+                portShape: { width: 8, height: 8, x: -4, y: -4, fill: '#161b22', stroke: 'var(--accent-cyan)', strokeWidth: 1 },
+                portLabel: { fontSize: 8, fill: '#ccc', textAnchor: 'end', refX: -8, refY: 3 }
             }
         }
     };
@@ -134,12 +119,19 @@ function renderMapTopology() {
     });
     locations.forEach(loc => {
         if (activeMapFilters.ubicacion && loc !== activeMapFilters.ubicacion) return;
+        
+        let hash = 0;
+        for (let i = 0; i < loc.length; i++) { hash = loc.charCodeAt(i) + ((hash << 5) - hash); }
+        const hue = Math.abs(hash % 360);
+        const locColor = `hsl(${hue}, 70%, 60%)`;
+        const locBg = `hsla(${hue}, 70%, 60%, 0.05)`;
+
         locationNodes[loc] = x6Graph.addNode({
             id: 'LOC_' + loc, shape: 'rect', x: 0, y: 0, width: 100, height: 100,
             label: loc, zIndex: 0,
             attrs: {
-                body: { fill: 'rgba(255,255,255,0.03)', stroke: '#444', strokeDasharray: '6,3', rx: 12, ry: 12 },
-                label: { fill: '#aaa', fontSize: 13, fontFamily: 'Outfit', fontWeight: 'bold',
+                body: { fill: locBg, stroke: locColor, strokeDasharray: '6,3', rx: 12, ry: 12 },
+                label: { fill: locColor, fontSize: 13, fontFamily: 'Outfit', fontWeight: 'bold',
                          textVerticalAnchor: 'top', textAnchor: 'left', refX: 12, refY: 8 }
             }
         });
@@ -155,52 +147,54 @@ function renderMapTopology() {
         if (activeMapFilters.categoria && equipo.Categoria !== activeMapFilters.categoria) return;
 
         const allInputs = [
-            ...db.conexiones.filter(c => c.ID_Destino === id && (!c.ID_Cable || !collapsedCables.has(c.ID_Cable))),
+            ...db.conexiones.filter(c => c.ID_Destino === id && !collapsedCables.has(c.ID_Origen) && !collapsedCables.has(c.ID_Destino)),
             ...directEdges.filter(e => e.target === id)
         ];
         const allOutputs = [
-            ...db.conexiones.filter(c => c.ID_Origen === id && (!c.ID_Cable || !collapsedCables.has(c.ID_Cable))),
+            ...db.conexiones.filter(c => c.ID_Origen === id && !collapsedCables.has(c.ID_Origen) && !collapsedCables.has(c.ID_Destino)),
             ...directEdges.filter(e => e.source === id)
         ];
 
+        // Do not render completely disconnected equipment unless forced
+        if (!activeMapFilters.showDisconnected && allInputs.length === 0 && allOutputs.length === 0) return;
+
         const ports = [];
         allInputs.forEach((conn, i) => {
-            const pid = (conn.ID_Patch || conn.id) + '-in';
+            const pid = conn.targetPort || ((conn.ID_Patch || conn.id) + '-in');
             if (globalPortIds.has(pid)) return;
             globalPortIds.add(pid);
-            const group = i < Math.ceil(allInputs.length / 2) ? 'in-left' : 'in-top';
             ports.push({
-                id: pid, group,
+                id: pid, group: 'in-left',
                 attrs: {
-                    portShape: { fill: stateColor(conn.Estado || conn.status) },
                     portLabel: { text: conn.Puerto_Destino || conn.portDst || '' }
                 },
                 data: { connId: conn.ID_Patch || conn.id?.replace('edge-', '') }
             });
         });
         allOutputs.forEach((conn, i) => {
-            const pid = (conn.ID_Patch || conn.id) + '-out';
+            const pid = conn.sourcePort || ((conn.ID_Patch || conn.id) + '-out');
             if (globalPortIds.has(pid)) return;
             globalPortIds.add(pid);
-            const group = i < Math.ceil(allOutputs.length / 2) ? 'out-right' : 'out-bottom';
             ports.push({
-                id: pid, group,
+                id: pid, group: 'out-right',
                 attrs: {
-                    portShape: { fill: stateColor(conn.Estado || conn.status) },
                     portLabel: { text: conn.Puerto_Origen || conn.portSrc || '' }
                 },
                 data: { connId: conn.ID_Patch || conn.id?.replace('edge-', '') }
             });
         });
 
+        const maxPorts = Math.max(allInputs.length, allOutputs.length);
+        const dynamicHeight = Math.max(50, maxPorts * 16 + 20);
+
         x6Graph.addNode({
-            id, shape: 'rect', width: Math.max(120, 80 + ports.length * 8), height: 60,
+            id, shape: 'rect', width: 160, height: dynamicHeight,
             label: equipo.Nombre, zIndex: 1,
             ports: { groups: PORT_GROUPS, items: ports },
             data: { type: 'equipo', item: equipo },
             attrs: {
                 body: { fill: '#161b22', stroke: 'var(--accent-cyan)', strokeWidth: 2, rx: 8, ry: 8 },
-                label: { fill: '#fff', fontSize: 11, fontFamily: 'Outfit', fontWeight: 'bold' }
+                label: { fill: '#fff', fontSize: 11, fontFamily: 'Outfit', fontWeight: 'bold', textWrap: { width: -20, height: -10, ellipsis: true } }
             }
         });
     });
@@ -223,7 +217,7 @@ function renderMapTopology() {
             ports.push({
                 id: pid,
                 group: c.ID_Origen === id ? 'out-right' : 'in-left',
-                attrs: { portShape: { fill: stateColor(c.Estado) } }
+                attrs: { portLabel: { text: '' } }
             });
         });
         
@@ -247,18 +241,24 @@ function renderMapTopology() {
             id: edge.id,
             source: { cell: edge.source, port: edge.sourcePort },
             target: { cell: edge.target, port: edge.targetPort },
-            router: { name: 'manhattan', args: { padding: 15 } },
+            router: { 
+                name: 'manhattan', 
+                args: { padding: 15 + (Math.abs(Array.from(edge.id).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0)) % 40) } 
+            },
             connector: { name: 'rounded', args: { radius: 10 } },
             data: { type: 'collapsed', edge },
-            labels: [{ attrs: {
-                label: { text: edge.signal || '', fill: '#fff', fontSize: 8, fontFamily: 'Outfit' },
-                rect: { fill: '#0d1117', stroke: edge.color, strokeWidth: 1, rx: 4, ry: 4 }
-            }}],
-            attrs: { line: {
-                stroke: edge.color, strokeWidth: 2,
-                sourceMarker: { name: 'circle', r: 4, fill: stateColor(edge.status), stroke: 'none' },
-                targetMarker: { name: 'block', size: 8, fill: stateColor(edge.status), stroke: 'none' }
-            }}
+            labels: [
+                { position: { distance: 20, offset: -8 }, attrs: { label: { text: edge.portSrcCable || '', fill: '#aaa', fontSize: 7, fontFamily: 'Outfit' }, rect: { fill: 'transparent', stroke: 'none' } } },
+                { position: { distance: 0.5, offset: -8 }, attrs: { label: { text: edge.cableLabel || '', fill: edge.color, fontSize: 8, fontFamily: 'Outfit' }, rect: { fill: 'transparent', stroke: 'none' } } },
+                { position: { distance: -20, offset: -8 }, attrs: { label: { text: edge.portDstCable || '', fill: '#aaa', fontSize: 7, fontFamily: 'Outfit' }, rect: { fill: 'transparent', stroke: 'none' } } }
+            ],
+            attrs: {
+                line: {
+                    stroke: edge.color, strokeWidth: 2,
+                    sourceMarker: { name: 'circle', r: 4, fill: stateColor(edge.status), stroke: 'none' },
+                    targetMarker: { name: 'block', size: 8, fill: stateColor(edge.status), stroke: 'none' }
+                }
+            }
         });
     });
 
@@ -268,13 +268,23 @@ function renderMapTopology() {
         if (!x6Graph.getCellById(conn.ID_Origen) || !x6Graph.getCellById(conn.ID_Destino)) return;
         
         const color = getSignalColor(conn.Tipo_Senial);
+        const isSrcEq = db.equipos.some(e => e.ID_Equipo === conn.ID_Origen);
+        const cablePortStr = isSrcEq ? conn.Puerto_Destino : conn.Puerto_Origen;
+        const lblPos = isSrcEq ? 20 : -20;
+
         x6Graph.addEdge({
             id: conn.ID_Patch,
             source: { cell: conn.ID_Origen, port: conn.ID_Patch + '-out' },
             target: { cell: conn.ID_Destino, port: conn.ID_Patch + '-in' },
-            router: { name: 'manhattan', args: { padding: 15 } },
+            router: { 
+                name: 'manhattan', 
+                args: { padding: 15 + (Math.abs(Array.from(conn.ID_Patch).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0)) % 40) } 
+            },
             connector: { name: 'rounded', args: { radius: 10 } },
             data: { type: 'direct', conn },
+            labels: [
+                { position: { distance: lblPos, offset: -8 }, attrs: { label: { text: cablePortStr || '', fill: '#aaa', fontSize: 7, fontFamily: 'Outfit' }, rect: { fill: 'transparent', stroke: 'none' } } }
+            ],
             attrs: { line: {
                 stroke: color, strokeWidth: 2,
                 sourceMarker: { name: 'circle', r: 4, fill: stateColor(conn.Estado), stroke: 'none' },
@@ -320,8 +330,10 @@ function renderMapTopology() {
             children.push({
                 id: 'ELK_LOC_' + loc,
                 layoutOptions: { 
-                    'elk.padding': '[top=40,left=20,bottom=20,right=20]',
-                    'elk.spacing.nodeNode': '40'
+                    'elk.padding': '[top=40,left=40,bottom=40,right=40]',
+                    'elk.spacing.nodeNode': '60',
+                    'elk.layered.spacing.nodeNodeBetweenLayers': '250',
+                    'elk.edgeRouting': 'ORTHOGONAL'
                 },
                 children: nodes.map(n => ({
                     id: n.id, width: n.getSize().width, height: n.getSize().height,
@@ -375,10 +387,12 @@ function renderMapTopology() {
                 'elk.algorithm': 'layered',
                 'elk.direction': 'RIGHT',
                 'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
-                'elk.padding': '[top=50,left=50,bottom=50,right=50]',
+                'elk.padding': '[top=30,left=30,bottom=30,right=30]',
                 'elk.spacing.componentComponent': '80',
-                'elk.spacing.nodeNode': '40',
-                'elk.layered.spacing.nodeNodeBetweenLayers': '100'
+                'elk.spacing.nodeNode': '100',
+                'elk.layered.spacing.nodeNodeBetweenLayers': '250',
+                'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+                'elk.edgeRouting': 'ORTHOGONAL'
             },
             children,
             edges: elkEdges
@@ -414,6 +428,16 @@ function renderMapTopology() {
                         node.setPosition(item.x + child.x, item.y + child.y);
                         // Now establish parent-child relationship for group dragging
                         locNode.addChild(node);
+                    });
+                }
+                
+                if (item.edges) {
+                    item.edges.forEach(e => {
+                        const edge = x6Graph.getCellById(e.id);
+                        if (edge && e.sections) {
+                            const vertices = (e.sections[0].bendPoints || []).map(p => ({ x: item.x + p.x, y: item.y + p.y }));
+                            edge.setVertices(vertices);
+                        }
                     });
                 }
             } else {
@@ -486,18 +510,22 @@ function renderMapTopology() {
     x6Graph.on('edge:click', ({ edge }) => {
         const d = edge.getData();
         if (!d) return;
+        
+        let cableIdToOpen = null;
         if (d.type === 'direct' && d.conn) {
-            // Open the connection modal directly
-            openConnectionModal(d.conn);
+            cableIdToOpen = d.conn.ID_Cable;
         } else if (d.type === 'collapsed' && d.edge) {
-            // Open the cable detail view
+            cableIdToOpen = d.edge.cableId;
+        }
+
+        if (cableIdToOpen) {
             document.getElementById('mapView').style.display = 'none';
             document.getElementById('resultsContainer').style.display = 'block';
             document.getElementById('activeModeDisplay').innerText = 'Operación';
             if (typeof currentMode !== 'undefined') currentMode = 'OPERACION';
             setTimeout(() => { 
-                if (typeof searchInput !== 'undefined') searchInput.value = d.edge.cableId;
-                if (typeof renderResults === 'function') renderResults(d.edge.cableId); 
+                if (typeof searchInput !== 'undefined') searchInput.value = cableIdToOpen;
+                if (typeof renderResults === 'function') renderResults(cableIdToOpen); 
             }, 50);
         }
     });
@@ -552,10 +580,28 @@ function updateMapFilterUI() {
                 <option value="">Todas</option>${cats.map(c => `<option value="${c}" ${activeMapFilters.categoria === c ? 'selected' : ''}>${c}</option>`).join('')}
             </select>`;
     }
+
+    if (!document.getElementById('filterDisconnectedWrap')) {
+        const wrap = document.createElement('div');
+        wrap.id = 'filterDisconnectedWrap';
+        wrap.style.marginTop = '12px';
+        if (filterCategoria && filterCategoria.parentNode) {
+            filterCategoria.parentNode.appendChild(wrap);
+        }
+    }
+    const wrapEl = document.getElementById('filterDisconnectedWrap');
+    if (wrapEl) {
+        wrapEl.innerHTML = `
+            <label style="display:flex; align-items:center; font-size:0.85rem; color:#ccc; cursor:pointer;">
+                <input type="checkbox" onchange="activeMapFilters.showDisconnected = this.checked; renderMapTopology()" ${activeMapFilters.showDisconnected ? 'checked' : ''} style="margin-right:8px;">
+                Mostrar sueltos
+            </label>
+        `;
+    }
 }
 
 function clearMapFilters() { 
-    activeMapFilters = { signal: null, ubicacion: null, categoria: null }; 
+    activeMapFilters = { signal: null, ubicacion: null, categoria: null, showDisconnected: false }; 
     renderMapTopology(); 
 }
 
