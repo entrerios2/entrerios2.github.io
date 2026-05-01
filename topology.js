@@ -16,7 +16,7 @@
  */
 
 let x6Graph = null;
-let activeMapFilters = { signal: null, ubicacion: null, categoria: null, showDisconnected: false };
+let activeMapFilters = { signal: null, ubicacion: null, categoria: null, showDisconnected: false, directLines: false };
 
 function openConnectionModal(conn) {
     if (!conn) return;
@@ -241,9 +241,13 @@ function renderMapTopology() {
             id: edge.id,
             source: { cell: edge.source, port: edge.sourcePort },
             target: { cell: edge.target, port: edge.targetPort },
-            router: { 
-                name: 'manhattan', 
-                args: { padding: 15 + (Math.abs(Array.from(edge.id).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0)) % 40) } 
+            router: activeMapFilters.directLines ? { name: 'normal' } : { 
+                name: 'metro', 
+                args: { 
+                    excludeNodes: Object.values(locationNodes),
+                    startDirections: ['right'], 
+                    endDirections: ['left']
+                } 
             },
             connector: { name: 'rounded', args: { radius: 10 } },
             data: { type: 'collapsed', edge },
@@ -276,9 +280,13 @@ function renderMapTopology() {
             id: conn.ID_Patch,
             source: { cell: conn.ID_Origen, port: conn.ID_Patch + '-out' },
             target: { cell: conn.ID_Destino, port: conn.ID_Patch + '-in' },
-            router: { 
-                name: 'manhattan', 
-                args: { padding: 15 + (Math.abs(Array.from(conn.ID_Patch).reduce((s, c) => Math.imul(31, s) + c.charCodeAt(0) | 0, 0)) % 40) } 
+            router: activeMapFilters.directLines ? { name: 'normal' } : { 
+                name: 'metro', 
+                args: { 
+                    excludeNodes: Object.values(locationNodes),
+                    startDirections: ['right'], 
+                    endDirections: ['left']
+                } 
             },
             connector: { name: 'rounded', args: { radius: 10 } },
             data: { type: 'direct', conn },
@@ -332,7 +340,7 @@ function renderMapTopology() {
                 layoutOptions: { 
                     'elk.padding': '[top=40,left=40,bottom=40,right=40]',
                     'elk.spacing.nodeNode': '60',
-                    'elk.layered.spacing.nodeNodeBetweenLayers': '250',
+                    'elk.layered.spacing.nodeNodeBetweenLayers': '175',
                     'elk.edgeRouting': 'ORTHOGONAL'
                 },
                 children: nodes.map(n => ({
@@ -364,7 +372,7 @@ function renderMapTopology() {
             const tgt = e.getTarget();
             if (!src || !tgt) return;
             
-            const edgeDef = { id: 'elk_' + e.id };
+            const edgeDef = { id: e.id };
             
             // Use port if available, otherwise node
             if (src.port) {
@@ -390,7 +398,7 @@ function renderMapTopology() {
                 'elk.padding': '[top=30,left=30,bottom=30,right=30]',
                 'elk.spacing.componentComponent': '80',
                 'elk.spacing.nodeNode': '100',
-                'elk.layered.spacing.nodeNodeBetweenLayers': '250',
+                'elk.layered.spacing.nodeNodeBetweenLayers': '175',
                 'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
                 'elk.edgeRouting': 'ORTHOGONAL'
             },
@@ -428,16 +436,6 @@ function renderMapTopology() {
                         node.setPosition(item.x + child.x, item.y + child.y);
                         // Now establish parent-child relationship for group dragging
                         locNode.addChild(node);
-                    });
-                }
-                
-                if (item.edges) {
-                    item.edges.forEach(e => {
-                        const edge = x6Graph.getCellById(e.id);
-                        if (edge && e.sections) {
-                            const vertices = (e.sections[0].bendPoints || []).map(p => ({ x: item.x + p.x, y: item.y + p.y }));
-                            edge.setVertices(vertices);
-                        }
                     });
                 }
             } else {
@@ -596,12 +594,16 @@ function updateMapFilterUI() {
                 <input type="checkbox" onchange="activeMapFilters.showDisconnected = this.checked; renderMapTopology()" ${activeMapFilters.showDisconnected ? 'checked' : ''} style="margin-right:8px;">
                 Mostrar sueltos
             </label>
+            <label style="display:flex; align-items:center; font-size:0.85rem; color:#ccc; cursor:pointer; margin-top:8px;">
+                <input type="checkbox" onchange="activeMapFilters.directLines = this.checked; renderMapTopology()" ${activeMapFilters.directLines ? 'checked' : ''} style="margin-right:8px;">
+                Líneas directas
+            </label>
         `;
     }
 }
 
 function clearMapFilters() { 
-    activeMapFilters = { signal: null, ubicacion: null, categoria: null, showDisconnected: false }; 
+    activeMapFilters = { signal: null, ubicacion: null, categoria: null, showDisconnected: false, directLines: false }; 
     renderMapTopology(); 
 }
 
