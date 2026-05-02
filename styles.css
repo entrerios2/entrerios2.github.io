@@ -65,7 +65,7 @@ h1 {
   gap: 0.5rem;
 }
 
-input[type="text"] {
+input[type="text"], input[type="search"] {
   flex: 1;
   background: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -75,9 +75,10 @@ input[type="text"] {
   font-size: 1rem;
   outline: none;
   transition: border-color 0.3s, box-shadow 0.3s;
+  -webkit-appearance: none; /* Fix for mobile Safari styling */
 }
 
-input[type="text"]:focus {
+input[type="text"]:focus, input[type="search"]:focus {
   border-color: var(--accent-cyan);
   box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
 }

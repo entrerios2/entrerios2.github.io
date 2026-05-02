@@ -775,11 +775,25 @@ function renderResults(specificId = null, pushState = true) {
                     </div>
                 </div>
             `;
-            card.onclick = () => renderResults(id);
+            card.onclick = () => {
+                if (currentMode === 'ADMIN') {
+                    const type = isCable ? 'cables' : 'equipos';
+                    editItem(type, id);
+                } else {
+                    renderResults(id);
+                }
+            };
             resultsContainer.appendChild(card);
         });
     } else {
-        renderTree(matches[0].ID_Equipo || matches[0].ID_Cable);
+        const item = matches[0];
+        const id = item.ID_Equipo || item.ID_Cable;
+        if (currentMode === 'ADMIN') {
+            const type = item.ID_Cable ? 'cables' : 'equipos';
+            editItem(type, id);
+        } else {
+            renderTree(id);
+        }
     }
 }
 
@@ -2076,13 +2090,19 @@ function setMode(mode, pushState = true, bypassWarning = false) {
         if (typeof renderMapTopology === 'function') renderMapTopology();
     } else if (mode === 'ADMIN') {
         if (mapView) mapView.style.display = 'none';
-        document.querySelector('.search-container').style.display = 'none';
-        resultsContainer.style.display = 'none';
+        document.querySelector('.search-container').style.display = 'flex';
         adminPanel.style.display = 'block';
-        renderInventory(); // Mirror mode in adminInventoryContainer
+        if (!searchInput.value) {
+            resultsContainer.style.display = 'none';
+            renderInventory(); 
+        } else {
+            resultsContainer.style.display = 'block';
+            adminPanel.style.display = 'none';
+            renderResults();
+        }
     } else {
         if (mapView) mapView.style.display = 'none';
-        document.querySelector('.search-container').style.display = 'none';
+        document.querySelector('.search-container').style.display = 'flex';
         adminPanel.style.display = 'none';
         resultsContainer.style.display = 'block';
         if (!searchInput.value) {
@@ -2196,7 +2216,21 @@ closeQrBtn.addEventListener('click', () => {
     }
 });
 
-searchInput.addEventListener('input', debounce(() => renderResults(), 180));
+searchInput.addEventListener('input', debounce(() => {
+    if (currentMode === 'ADMIN') {
+        if (!searchInput.value.trim()) {
+            adminPanel.style.display = 'block';
+            resultsContainer.style.display = 'none';
+            renderInventory();
+        } else {
+            adminPanel.style.display = 'none';
+            resultsContainer.style.display = 'block';
+            renderResults();
+        }
+    } else {
+        renderResults();
+    }
+}, 180));
 
 window.addEventListener('online', () => {
     updateOfflineStatus();
