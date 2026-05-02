@@ -1,4 +1,4 @@
-const CACHE_NAME = 'av-tech-v137';
+const CACHE_NAME = 'av-tech-v138';
 const ASSETS = [
   './',
   './index.html',
@@ -6,6 +6,10 @@ const ASSETS = [
   './app.js',
   './topology.js',
   './manifest.json',
+  './icons/apple-touch-icon.png',
+  './icons/favicon-32x32.png',
+  './icons/favicon-16x16.png',
+  './icons/favicon.ico',
   'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
   'https://cdn.jsdelivr.net/npm/@antv/x6@3/dist/x6.min.js',
   'https://unpkg.com/elkjs@0.8.2/lib/elk.bundled.js'
