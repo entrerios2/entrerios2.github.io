@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <title>Audio y Video Circuito ER2</title>
-    <link rel="stylesheet" href="styles.css?v=138.0">
+    <link rel="stylesheet" href="styles.css?v=140.0">
     <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
@@ -84,6 +84,7 @@
                 <button class="menu-item" onclick="setMode('MAPA')"><span class="material-icons">hub</span> Mapa</button>
                 <button class="menu-item" onclick="setMode('ADMIN')"><span class="material-icons">admin_panel_settings</span> Administración</button>
                 <button class="menu-item" onclick="shareApp()"><span class="material-icons">share</span> Compartir</button>
+                <button id="installBtn" class="menu-item" style="display:none;"><span class="material-icons">download</span> Instalar Aplicación</button>
             </div>
             <div class="menu-section">
                 <h3>Referencias</h3>
@@ -424,8 +425,8 @@
 
     <!-- Floating Mode Toggle REMOVED -->
 
-    <script src="topology.js?v=138.0"></script>
-    <script src="app.js?v=138.0"></script>
+    <script src="topology.js?v=140.0"></script>
+    <script src="app.js?v=140.0"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

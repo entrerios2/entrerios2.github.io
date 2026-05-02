@@ -1,4 +1,4 @@
-const CACHE_NAME = 'av-tech-v138';
+const CACHE_NAME = 'av-tech-v140';
 const ASSETS = [
   './',
   './index.html',
@@ -7,6 +7,9 @@ const ASSETS = [
   './topology.js',
   './manifest.json',
   './icons/apple-touch-icon.png',
+  './icons/android-chrome-192x192.png',
+  './icons/android-chrome-512x512.png',
+  './icons/maskable-icon-512x512.png',
   './icons/favicon-32x32.png',
   './icons/favicon-16x16.png',
   './icons/favicon.ico',
