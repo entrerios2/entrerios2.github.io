@@ -2052,7 +2052,14 @@ async function syncQueue() {
 /**
  * 5. Event Listeners y Utilidades
  */
-function setMode(mode, pushState = true) {
+function setMode(mode, pushState = true, bypassWarning = false) {
+    if (mode === 'ADMIN' && !bypassWarning) {
+        const skipWarning = localStorage.getItem('skip_admin_warning') === 'true';
+        if (!skipWarning) {
+            document.getElementById('adminWarningModal').style.display = 'flex';
+            return;
+        }
+    }
     currentMode = mode;
     const modeTitle = mode === 'OPERACION' ? 'Operación' : (mode === 'ADMIN' ? 'Administración' : 'Mapa');
     document.getElementById('activeModeDisplay').innerText = modeTitle;
@@ -2571,6 +2578,19 @@ function fillPatchBlock(block, conn, role) {
     block.querySelector('.p-des').value = conn.Puerto_Destino;
     block.querySelector('.p-signal').value = conn.Tipo_Senial || '';
     block.querySelector('.p-notes').value = conn.Notas || '';
+}
+
+function confirmAdminEntry() {
+    if (document.getElementById('dontShowAdminWarning').checked) {
+        localStorage.setItem('skip_admin_warning', 'true');
+    }
+    document.getElementById('adminWarningModal').style.display = 'none';
+    setMode('ADMIN', true, true); // Bypass warning
+}
+
+function cancelAdminEntry() {
+    document.getElementById('adminWarningModal').style.display = 'none';
+    setMode('OPERACION');
 }
 
 // Inicialización de la aplicación
