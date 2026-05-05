@@ -1,4 +1,4 @@
-Aquí tienes el Documento de Definición del Sistema (DDS) completo y unificado. Este documento integra todas las iteraciones arquitectónicas, estrategias de optimización y módulos funcionales que hemos diseñado, representando una aplicación web de grado profesional, autónoma y altamente especializada.
+Aquí tienes el Documento de Definición del Sistema (DDS) completo, unificado y en su versión final, integrando todas las capas arquitectónicas, módulos, flujos de trabajo y referencias técnicas.
 
 ***
 
@@ -57,26 +57,26 @@ Traducción de lenguaje natural subjetivo a parámetros técnicos exactos.
 *   **Motor LLM Local:** Procesa la intención del usuario y entrega instrucciones directas de ecualización o compresión dinámica adaptadas al inventario de hardware.
 
 ### 3.5. Módulo de Gestión de Conocimiento (Local RAG)
-Garantiza que la IA brinde asistencia técnica precisa, basada en literatura acústica comprobada y no en alucinaciones.
-*   **Pre-compilación Offline:** Libros y manuales técnicos se fragmentan y vectorizan en la máquina de desarrollo, generando un *Payload de Conocimiento* estático.
-*   **Inferencia en Vivo:** Ante una consulta, `Transformers.js` vectoriza la pregunta instantáneamente y el motor vectorial recupera fragmentos clave del libro para inyectarlos en el prompt del LLM, fundamentando su respuesta.
+Garantiza que la IA brinde asistencia técnica precisa, basada en literatura acústica comprobada y no en alucinaciones genéricas.
+*   **Pre-compilación Offline:** Libros y manuales técnicos se fragmentan y vectorizan en la máquina de desarrollo (mediante scripts en Python/Node.js), generando un *Payload de Conocimiento* estático.
+*   **Inferencia en Vivo:** Ante una consulta, `Transformers.js` vectoriza la pregunta instantáneamente y el motor vectorial recupera fragmentos clave de la literatura para inyectarlos en el prompt del LLM, fundamentando su respuesta.
 
 ### 3.6. Prevención y Monitoreo de Acoples (AFE - Ringing Out)
 Sistema defensivo y preventivo contra la retroalimentación.
-*   **Pitar la Sala (Pre-evento):** Escucha proactiva durante la subida de ganancia inicial, detectando el anillo de resonancia y sugiriendo Filtros de Muesca (Notch) quirúrgicos antes del acople.
+*   **Pitar la Sala (Pre-evento):** Escucha proactiva durante la subida de ganancia inicial, detectando el anillo de resonancia y sugiriendo Filtros de Muesca (*Notch*) quirúrgicos antes del acople molesto.
 *   **Monitoreo Centinela:** Función activa durante todo el evento alertando de frecuencias persistentes de crecimiento exponencial en segundo plano.
 
 ### 3.7. Diagnóstico Proactivo (El Copiloto Acústico)
 Auditoría continua y no intrusiva del evento en vivo.
-*   **Optimización de Rendimiento (20 fps):** El motor visual y de muestreo estadístico del hilo principal opera a 20 fps (con retención de picos y decaimiento suave) para evitar el sobrecalentamiento del equipo, mientras el núcleo DSP en WASM corre a la velocidad del reloj de audio.
+*   **Optimización de Rendimiento (20 fps):** El motor visual y de muestreo estadístico del hilo principal opera a 20 fps (con retención de picos y decaimiento suave) para evitar el sobrecalentamiento del equipo, mientras el núcleo DSP en WASM corre a la velocidad nativa del reloj de audio.
 *   **Evaluación Tonal Continua:** Análisis de promedios móviles para detectar deficiencias sostenidas (ej. pérdida de graves por alejamiento del micrófono).
-*   **Smart Toasts (Alertas Accionables):** Generación de notificaciones efímeras con un diagnóstico y una acción concreta. (Ej. *"💡 Noto pérdida prolongada de presencia. Sugiero +3dB en 2.5 kHz. `[ Lo hice ]` `[ Ignorar ]`"*).
-*   **Lógica de Backoff:** Si el operador pulsa `[ Ignorar ]`, el sistema silencia esa alerta específica por un tiempo prolongado para prevenir fatiga visual. Si pulsa `[ Lo hice ]`, el sistema verifica la mejora.
+*   **Smart Toasts (Alertas Accionables):** Generación de notificaciones efímeras con un diagnóstico semántico y una acción concreta en la UI. (Ej. *"💡 Noto pérdida prolongada de presencia. Sugiero +3dB en 2.5 kHz. `[ Lo hice ]` `[ Ignorar ]`"*).
+*   **Lógica de Backoff:** Si el operador pulsa `[ Ignorar ]`, el sistema silencia esa alerta específica por un tiempo prolongado para prevenir fatiga visual. Si pulsa `[ Lo hice ]`, el sistema verifica la mejora matemáticamente.
 
 ### 3.8. Módulo de Portabilidad y Flujo Asimétrico
 Separación de la responsabilidad de "Diseño" y "Operación" mediante la gestión del estado.
 *   **Exportación de Configuración (State Serialization):** Todo el entorno de los Módulos 3.1 y 3.2 (Plano, distancias, temperaturas, inventario EQ, perfiles mic/bafle, topología) se compila en un archivo `.json`.
-*   **Flujo Técnico $\rightarrow$ Operador:** El Ingeniero diseña el archivo de configuración con antelación y se lo envía al Operador local. El Operador simplemente carga el JSON en la PWA offline, hidratando todo el estado de la aplicación instantáneamente y comenzando directamente en la fase de medición guiada.
+*   **Flujo Técnico $\rightarrow$ Operador:** El Ingeniero diseña el archivo de configuración con antelación y se lo envía al Operador local. El Operador simplemente carga el JSON en la PWA offline, hidratando todo el estado de la aplicación instantáneamente y comenzando directamente en la fase de medición y operación.
 
 ---
 
@@ -85,14 +85,26 @@ Separación de la responsabilidad de "Diseño" y "Operación" mediante la gesti�
 El ciclo de información opera en bucle cerrado local, garantizando privacidad y velocidad:
 
 1.  **Ingesta Física:** Micrófono de Medición $\rightarrow$ Interfaz Hardware $\rightarrow$ `MediaDevices API` (Audio en crudo).
-2.  **Análisis DSP:** El `AudioWorklet` transfiere el buffer al módulo **WASM**. Se ejecutan las FFT, compensación de perfiles y detección AFE.
-3.  **Inyección de Contexto:** El hilo de JavaScript intercepta datos anómalos del WASM (a 20fps), los cruza con el Perfil de Hardware (`IndexedDB`) y recupera teoría técnica del motor vectorial (Local RAG).
-4.  **Inferencia Semántica:** Se ensambla un *System Prompt* oculto y se envía al modelo **LLM en WebGPU** local.
-5.  **Renderizado UI:** La interfaz recibe el JSON de salida de la IA y actualiza el *Smart Toast* o los controles visuales de la aplicación.
+2.  **Análisis DSP:** El `AudioWorklet` transfiere el buffer al binario **WASM**. Se ejecutan las FFT, compensación de perfiles y detección AFE.
+3.  **Inyección de Contexto:** El hilo de JavaScript intercepta datos anómalos del WASM (haciendo *polling* a 20fps), los cruza con el Perfil de Hardware (`IndexedDB`) y recupera teoría técnica del motor vectorial local.
+4.  **Inferencia Semántica:** Se ensambla un *System Prompt* oculto y se envía al modelo **LLM en WebGPU**.
+5.  **Renderizado UI:** El frontend en *antigravity* recibe el JSON de salida de la IA y actualiza los *Smart Toasts* o los controles visuales de la aplicación.
 
 ## 5. Requisitos No Funcionales (RNF)
 
 *   **Autonomía Total (Offline-First):** Una vez que los Service Workers guardan en caché los *assets* de la PWA y los *Payloads de Conocimiento*, la aplicación debe operar indefinidamente sin conexión a internet.
-*   **Rendimiento Sostenido (Thermal Management):** La división de procesamiento asíncrono y la reducción de renderizado visual a 20 fps deben garantizar que la app pueda ejecutarse en monitoreo "Centinela" durante más de 8 horas sin causar *thermal throttling* en el dispositivo del usuario.
-*   **Privacidad Nativa:** Ninguna señal de audio capturada, transcripción, configuración de recinto o interacción de texto debe ser enviada a redes externas o APIs en la nube.
-*   **Usabilidad en Baja Iluminación:** La interfaz debe ser minimalista, utilizar temas oscuros de alto contraste y evitar flujos de trabajo de múltiples clics durante el modo de evento en vivo para minimizar la carga cognitiva del operador.
+*   **Rendimiento Sostenido (Thermal Management):** La división de procesamiento asíncrono y la reducción del ciclo de repintado a 20 fps deben garantizar que la app pueda ejecutarse en monitoreo "Centinela" durante más de 8 horas continuas sin causar limitación térmica (*thermal throttling*) en el dispositivo.
+*   **Privacidad Nativa:** Ninguna señal de audio capturada, transcripción, configuración de recinto o interacción de texto debe ser enviada a redes externas, APIs en la nube o bases de datos de terceros.
+*   **Usabilidad en Baja Iluminación:** La interfaz debe adherirse a un diseño minimalista, utilizando temas oscuros de alto contraste y evitando flujos de trabajo de múltiples clics durante el modo de evento en vivo para minimizar la carga cognitiva del operador.
+
+## 6. Referencias y Repositorios Base (Open Source)
+
+El desarrollo del motor de procesamiento digital de señales (DSP) y los algoritmos de corrección acústica de esta plataforma toman como referencia arquitectónica y matemática los siguientes proyectos de código abierto:
+
+*   **Open Sound Meter (OSM)**
+    *   **Repositorio:** [https://github.com/psmokotnin/osm](https://github.com/psmokotnin/osm)
+    *   **Aplicación en el Sistema:** Sirve como modelo de referencia para el **Módulo 3.3 (Asistente Guiado de Calibración)** y la arquitectura de captura multicanal. La lógica implementada en OSM para el cálculo en tiempo real de la Función de Transferencia (Magnitud, Fase y Coherencia), así como el alineamiento de retardo (Delay finder) mediante la respuesta al impulso, guiará la reescritura y optimización del código en C/Rust que será compilado a WebAssembly para el `AudioWorklet`.
+
+*   **AutoEq**
+    *   **Repositorio:** [https://github.com/jaakkopasanen/AutoEq](https://github.com/jaakkopasanen/AutoEq)
+    *   **Aplicación en el Sistema:** Provee la base teórica e inspiración algorítmica para el **Módulo 3.2 (Capa de Traducción de Hardware)** y la generación automática de filtros paramétricos. El sistema adaptará los conceptos matemáticos de AutoEq (cálculo de error entre medición y curva objetivo, suavizado de curvas y derivación de parámetros) para ejecutarlos de forma nativa en el cliente (JavaScript/WASM), permitiendo traducciones precisas de perfiles acústicos en tiempo real.
