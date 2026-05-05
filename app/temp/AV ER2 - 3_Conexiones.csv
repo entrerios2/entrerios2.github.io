@@ -1,0 +1,95 @@
+ID_Patch,ID_Origen,Puerto_Origen,ID_Destino,Puerto_Destino,Tipo_Senial,Estado,Notas,Metadatos
+A-FORK-CON/A-FORK-JKRCA,A-FORK-CON,Headphones Out,A-FORK-JKRCA,"Jack 1/4"" In",Audio Line,Desconectado,Salida a TVs y sala auxiliar,{}
+A-FORK-CON/A-FORK-MEDH,A-FORK-CON,Main Out L,A-FORK-MEDH,1,Audio Line,Desconectado,Salida a delay 1,{}
+A-FORK-CON/A-FORK-MEDH2,A-FORK-CON,Main Out R,A-FORK-MEDH,2,Audio Line,Desconectado,Salida a delay 2,{}
+A-FORK-JK3RCA/A-FORK-RCAJK1,A-FORK-JK3RCA,L Out (Verde),A-FORK-RCAJK1,RCA In,Audio Line,Desconectado,,{}
+A-FORK-JK3RCA/A-FORK-RCAJK2,A-FORK-JK3RCA,R Out (Rojo),A-FORK-RCAJK2,RCA In,Audio Line,Desconectado,,{}
+A-FORK-JKRCA/A-FORK-JK3RCA,A-FORK-JKRCA,RCA Out,A-FORK-JK3RCA,MIC In (Blanco),Audio Line,Desconectado,,{}
+A-FORK-MEDM/A-FORK-CON1,A-FORK-MEDM,1,A-FORK-CON,In 1,Audio Mic,Desconectado,,{}
+A-FORK-MEDM/A-FORK-CON2,A-FORK-MEDM,2,A-FORK-CON,In 2,Audio Mic,Desconectado,,{}
+A-FORK-MEDM/A-FORK-CON3,A-FORK-MEDM,3,A-FORK-CON,In 3,Audio Mic,Desconectado,,{}
+A-FORK-MEDM/A-FORK-CON4,A-FORK-MEDM,4,A-FORK-CON,In 4,Audio Mic,Desconectado,,{}
+A-FORK-RCAJK1/A-FORK-CON,A-FORK-RCAJK1,"Jack 1/4"" Out",A-FORK-CON,In 7,Audio Line,Desconectado,,{}
+A-FORK-RCAJK2A-FORK-CON,A-FORK-RCAJK2,"Jack 1/4"" Out",A-FORK-CON,In 8,Audio Line,Desconectado,,{}
+A-FORK-XLRMJK6/A-FORK-MEDH,A-FORK-XLRMJK6,XLR M ,A-FORK-MEDH,3,Audio Line,Desconectado,,{}
+A-FORK-XLRMJK7/A-FORK-MEDH,A-FORK-XLRMJK7,XLR M ,A-FORK-MEDH,4,Audio Line,Desconectado,,{}
+A-PLA-MEDH/A-PLA-RJ,A-PLA-MEDH,RJ45,A-PLA-RJ,RJ45,Audio Mic,Desconectado,,{}
+A-PLA-MIC1/A-PLA-XLR1,A-PLA-MIC1,XLR,A-PLA-XLR1,XLR H,Audio Mic,Desconectado,,{}
+A-PLA-MIC2/A-PLA-XLR2,A-PLA-MIC2,XLR,A-PLA-XLR2,XLR H,Audio Mic,Desconectado,,{}
+A-PLA-MIC3/A-PLA-XLR3,A-PLA-MIC3,XLR,A-PLA-XLR3,XLR H,Audio Mic,Desconectado,,{}
+A-PLA-MIC4/A-PLA-XLR4,A-PLA-MIC4,XLR,A-PLA-XLR4,XLR H,Audio Mic,Desconectado,,{}
+A-PLA-RJ/A-FORK-MEDM,A-PLA-RJ,RJ45,A-FORK-MEDM,RJ45,Audio Mic,Desconectado,,{}
+A-PLA-XLR1/A-PLA-MEDH,A-PLA-XLR1,XLR M,A-PLA-MEDH,XLR H 1,Audio Mic,Desconectado,,{}
+A-PLA-XLR2/A-PLA-MEDH,A-PLA-XLR2,XLR M,A-PLA-MEDH,XLR H 2,Audio Mic,Desconectado,,{}
+A-PLA-XLR3/A-PLA-MEDH,A-PLA-XLR3,XLR M,A-PLA-MEDH,XLR H 3,Audio Mic,Desconectado,,{}
+A-PLA-XLR4/A-PLA-MEDH,A-PLA-XLR4,XLR M,A-PLA-MEDH,XLR H 4,Audio Mic,Desconectado,,{}
+E-FOH-F12V1/E-FOH-POE1,E-FOH-F12V1,DC 12v Out,E-FOH-POE1,DC In,Electricidad DC 12v,Desconectado,,{}
+E-FOH-POE1/R-FORK-ROUTER,E-FOH-POE1,RJ45 M,R-FORK-ROUTER,ETH 1,Red Ethernet,Desconectado,,{}
+E-FOH-POE2/E-FOH-POE1,E-FOH-POE2,RJ45 H,E-FOH-POE1,RH45 H,Red Ethernet POE,Desconectado,,{}
+E-FOH-POE2/V-FOH-CAMS,E-FOH-POE2,DC 12v Out,V-FOH-CAMS,DC In,Electricidad DC 12v,Desconectado,,{}
+V-AURK-SDIHDMI/V-AURK-HDMISP,V-AURK-SDIHDMI,HDMI Out,V-AURK-HDMISP,HDMI In,HDMI,Desconectado,Conexión a proyectores de PA,{}
+V-AURK-SDIHDMI/V-AUX-SDI,V-AURK-SDIHDMI,SDI Out,V-AUX-SDI,In,Video SDI,Desconectado,,{}
+V-AUX-SDI/V-AUX-SDIHDMI,V-AUX-SDI,Out,V-AUX-SDIHDMI,SDI In,Video SDI,Desconectado,,{}
+V-FOH-CAMAUD/V-FOH-CAMS,V-FOH-CAMAUD,USB,V-FOH-CAMS,USB 2,USB,Desconectado,Conexión a RPi,{}
+V-FOH-CAMPLA/V-FOH-CAMS,V-FOH-CAMPLA,USB,V-FOH-CAMS,USB 1,USB,Desconectado,Conexión a RPi,{}
+V-FOH-CAMPTZ/V-FOH-CAMS,V-FOH-CAMPTZ,Ethernet,V-FOH-CAMS,ETH 1,Red Ethernet,Desconectado,,{}
+V-FOH-CAMS/E-FOH-POE2,V-FOH-CAMS,ETH 5,E-FOH-POE2,RJ45 M,Red Ethernet,Desconectado,,{}
+V-FOH-SDI/V-AURK-SDIHDMI,V-FOH-SDI,Out,V-AURK-SDIHDMI,SDI In,Video SDI,Desconectado,,{}
+V-FORK-AVRF/V-PB-COAX1,V-FORK-AVRF,RF Out,V-PB-COAX1,In,Video RF analógico,Desconectado,,{}
+V-FORK-HDMIAV/V-FORK-AVRF,V-FORK-HDMIAV,AV Out,V-FORK-AVRF,AV In,Video Compuesto,Desconectado,,{}
+V-FORK-HDMISDI/V-FOH-SDI,V-FORK-HDMISDI,SDI 1,V-FOH-SDI,In,Video SDI,Desconectado,,{}
+V-FORK-HDMISP/V-FORK-HDMIAV,V-FORK-HDMISP,HDMI Out 2,V-FORK-HDMIAV,HDMI In,Video HDMI,Desconectado,,{}
+V-FORK-HDMISP/V-FORK-HDMISDI,V-FORK-HDMISP,HDMI Out 1,V-FORK-HDMISDI,HDMI In,Video HDMI,Desconectado,,"{""historial"":[{""timestamp"":1777731896003,""nombre"":""Jonatan "",""detalle"":""Conectado""},{""timestamp"":1777731903250,""nombre"":""Jonatan "",""detalle"":""Desconectado""}],""notas"":[]}"
+V-FORK-PC/A-FORK-JK3RCA,V-FORK-PC,Headset Out,A-FORK-JK3RCA,"3,5 Jack TRSS",Audio Line,Desconectado,,{}
+V-FORK-PC/V-FORK-HDMISP,V-FORK-PC,HDMI 2 (DisplayPort),V-FORK-HDMISP,HDMI In,Video HDMI,Desconectado,,{}
+A-FORK-MEDH/A-FOH-SPRJ,A-FORK-MEDH,RJ45 Out,A-FOH-SPRJ,RJ45 In,Audio Line,Desconectado,,{}
+A-FOH-SPRJ/A-DL1-SPRJ,A-FOH-SPRJ,RJ45 Out 1,A-DL1-SPRJ,RJ45 In,Audio Line,Desconectado,,{}
+A-FOH-SPRJ/A-CPA-SPRJ,A-FOH-SPRJ,RJ45 Out 2,A-CPA-SPRJ,RJ45 In,Audio Line,Desconectado,,{}
+A-CPA-SPRJ/A-CPA-SPK1,A-CPA-SPRJ,RJ45 Out 1,A-CPA-SPK1,Input,Audio Line,Desconectado,,{}
+A-CPA-SPRJ/A-FOH-CPRJ1,A-CPA-SPRJ,RJ45 In,A-FOH-CPRJ1,RJ45 Out,Audio Line,Desconectado,,{}
+A-FOH-CPRJ1/A-AUX-CONS,A-FOH-CPRJ1,RJ45 Out,A-AUX-CONS,Line In 1,Audio Line,Desconectado,,{}
+A-DL1-SPRJ/A-DL2-CPRJ,A-DL1-SPRJ,RJ45 Out 1,A-DL2-CPRJ,RJ45 In,Audio Line,Desconectado,,{}
+A-DL1-SPRJ/A-DL1-SPXLR,A-DL1-SPRJ,RJ45  Out 2,A-DL1-SPXLR,RJ45 In,Audio Line,Desconectado,,{}
+A-DL1-SPXLR/A-DL1-SPK1,A-DL1-SPXLR,XLR Out 1,A-DL1-SPK1,Input,Audio Line,Desconectado,,{}
+A-DL1-SPXLR/A-DL1-SPK2,A-DL1-SPXLR,XLR Out 2,A-DL1-SPK2,Input,Audio Line,Desconectado,,{}
+A-DL2-CPRJ/A-DL2-SPXLR,A-DL2-CPRJ,RJ45 Out,A-DL2-SPXLR,RJ45 In,Audio Line,Desconectado,,{}
+A-DL2-SPXLR/A-DL2-SPK1,A-DL2-SPXLR,XLR Out 1,A-DL2-SPK1,Input,Audio Line,Desconectado,,{}
+A-DL2-SPXLR/A-DL2-SPK2,A-DL2-SPXLR,XLR Out 2,A-DL2-SPK2,Input,Audio Line,Desconectado,,{}
+V-AUX-SDIHDMI/V-AUX-HDMISP,V-AUX-SDIHDMI,HDMI Out,V-AUX-HDMISP,HDMI In,Video HDMI,Desconectado,,{}
+E-AUX-F5vU/V-AUX-SDIHDMI,E-AUX-F5vU,DC 5v Out,V-AUX-SDIHDMI,DC In,Electricidad DC 5v,Desconectado,,{}
+E-AUX-FCON/A-AUX-CONS,E-AUX-FCON,DC Out,A-AUX-CONS,DC In,Electricidad DC,Desconectado,,{}
+A-AUX-CONS/A-CPB-SPK2,A-AUX-CONS,Line Out,A-CPB-SPK2,Input,Audio Line,Desconectado,,{}
+V-FOH-KBD/V-FORK-PC,V-FOH-KBD,USB,V-FORK-PC,USB,USB,Desconectado,,{}
+V-FOH-MSE/V-FORK-PC,V-FOH-MSE,USB,V-FORK-PC,USB,USB,Desconectado,,{}
+V-FORK-PC/V-FOH-MON,V-FORK-PC,HDMI Out,V-FOH-MON,HDMI In,Video HDMI,Desconectado,,{}
+V-PB-COAX1/V-REC-SPLT,V-PB-COAX1,Out,V-REC-SPLT,In,Video RF analógico,Desconectado,,{}
+V-REC-SPLT/V-REC-TV,V-REC-SPLT,Out 1,V-REC-TV,Cable In,Video RF analógico,Desconectado,,{}
+V-REC-SPLT/VID-PAX-TV,V-REC-SPLT,Out 2,VID-PAX-TV,Cable In,Video RF analógico,Desconectado,,{}
+A-FORK-CON/A-PLA-SPK4-1,A-FORK-CON,AUX Out 1,A-PLA-SPK4,"Jack 1/4"" In",Audio Line,Desconectado,Salida PA,{}
+A-FORK-CON/A-PLA-SPK1,A-FORK-CON,AUX Out 2,A-PLA-SPK1,Input,Audio Line,Desconectado,Salida a monitores plataforma,{}
+A-PLA-SPK1/A-PLA-SPK2,A-PLA-SPK1,Loop Out,A-PLA-SPK2,Input,Audio Line,Desconectado,,{}
+A-PLA-SPK4/A-PLA-SPK3,A-PLA-SPK4,Loop Out,A-PLA-SPK3,Input,Audio Line,Desconectado,Front fill,{}
+A-PLA-SPK3/A-PLA-SPK5,A-PLA-SPK3,Loop  Out,A-PLA-SPK5,Input,Audio Line,Desconectado,,{}
+E-FOH-ILK1/A-FOH-RACK,E-FOH-ILK1,AC 220v Out,A-FOH-RACK,AC 220v In 1,Electricidad AC 220v,Desconectado,,{}
+E-FOH-ILK2/A-FOH-RACK,E-FOH-ILK2,AC 220v Out,A-FOH-RACK,AC 220v In 2,Electricidad AC 220v,Desconectado,,{}
+E-FOH-TAB/E-FOH-ILK1,E-FOH-TAB,Toma 220v 1,E-FOH-ILK1,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-FOH-TAB/E-FOH-ILK2,E-FOH-TAB,Toma 220v 2,E-FOH-ILK2,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-FOH-TAB/E-FOH-F12V1,E-FOH-TAB,Toma  220v 3,E-FOH-F12V1,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-FOH-TAB/E-FOH-F12V2,E-FOH-TAB,Toma 220v 4,E-FOH-F12V2,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-FOH-F12V2/V-FOH-MON,E-FOH-F12V2,DC 12v Out,V-FOH-MON,DC In,Electricidad DC 12v,Desconectado,,{}
+V-FOH-CAMS/V-FOH-CAMPTZ,V-FOH-CAMS,DC 12v Out,V-FOH-CAMPTZ,DC In,Electricidad DC 12v,Desconectado,,{}
+E-FOH-AL17/E-DLY1-ILK1,E-FOH-AL17,Toma 220v,E-DLY1-ILK1,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-FOH-AL18/E-DLY1-ILK2,E-FOH-AL18,Toma 220v,E-DLY1-ILK2,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-DLY1-ILK1/A-DL1-SPK1,E-DLY1-ILK1,AC 220v Out,A-DL1-SPK1,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-DLY1-ILK2/A-DL1-SPK2,E-DLY1-ILK2,AC 220v Out,A-DL1-SPK2,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+R-FOH-NET/R-FORK-ROUTER,R-FOH-NET,RJ45,R-FORK-ROUTER,WAN,Red Ethernet,Desconectado,,{}
+E-PLA-ILK1/A-PLA-SPK1,E-PLA-ILK1,AC 220v Out,A-PLA-SPK1,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-PLA-ILK2/A-PLA-SPK2,E-PLA-ILK2,AC 220v Out,A-PLA-SPK2,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-PLA-ILK3/A-PLA-SPK3,E-PLA-ILK3,AC 220v Out,A-PLA-SPK3,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-PLA-ILK4/A-PLA-SPK4,E-PLA-ILK4,AC 220v Out,A-PLA-SPK4,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-PLA-ILK5/A-PLA-SPK5,E-PLA-ILK5,AC 220v Out,A-PLA-SPK5,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-DLY2-ILK1/A-DL2-SPK1,E-DLY2-ILK1,AC 220v Out,A-DL2-SPK1,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-DLY2-ILK2/A-DL2-SPK2,E-DLY2-ILK2,AC 220v Out,A-DL2-SPK2,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-CPA-ILK/A-CPA-SPK1,E-CPA-ILK,AC 220v Out,A-CPA-SPK1,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-CPB-ILK/A-CPB-SPK2,E-CPB-ILK,AC 220v Out,A-CPB-SPK2,AC 220v In,Electricidad AC 220v,Desconectado,,{}
+E-FOH-ALZ2/E-FOH-AL15,E-FOH-ALZ2,Toma 220v 1,E-FOH-AL15,AC 220v In,Electricidad AC 220v,Desconectado,,{}
