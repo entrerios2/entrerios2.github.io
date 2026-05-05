@@ -444,9 +444,9 @@ function getConnectorIcon(conector) {
 
 #### [MODIFY] [app.js](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/app.js)
 
-**Migración de puertos (Paso 1.0):**
+**Puertos ad-hoc (Secundarios):**
 
-- Función `migrarPuertosDesdeConexiones()` — extrae puertos de conexiones existentes a metadatos
+- Función `detectAdHocPorts()` — detecta puertos en `db.conexiones` que no están en los metadatos del equipo, para mostrarlos en la UI de edición y permitir su migración manual.
 
 **Editor de puertos en formularios admin:**
 
@@ -501,344 +501,6 @@ function getConnectorIcon(conector) {
 - `.tree-location-transition` — separador punteado de transición entre ubicaciones
 - `.port-editor-row` — fila de puerto en formularios de admin
 - `.port-direction-badge` — pastilla coloreada por dirección (verde=entrada, naranja=salida, azul=bidireccional)
-
----
-
-## Fase 3 — Asistente de Conexionado
-
-### Objetivo
-Reemplazar el actual formulario de ruteo con un asistente guiado que, desde un equipo/puerto, permite elegir equipos destino filtrados por compatibilidad, y asignar cables con 3 modos: del stock, genérico (stub), o conexión directa.
-
-### Flujo del asistente
-
-```
-1. Se abre desde:
-   - Botón 🔗 en un puerto del formulario (Fase 2) → puerto pre-seleccionado
-   - Botón hub en tabla admin → equipo pre-seleccionado, wizard muestra todos sus puertos
-   - Menú de la ficha de operación
-
-2. Se muestran los puertos del equipo (definidos en metadatos)
-
-3. Para cada puerto:
-   a. Seleccionar equipo destino (filtrado por señal compatible y dirección inversa)
-   b. Seleccionar puerto destino del equipo elegido
-   c. Elegir modo de cable:
-
-      ○ Cable del stock    → selector filtrado por conector compatible
-      ○ Cable genérico     → definir requisitos (tipo, largo mín, señal)
-      ○ Conexión directa   → sin cable (equipo a equipo)
-
-   d. **(Nuevo) Ajustar parámetros**: Muestra los parámetros base del equipo destino y permite modificarlos para esta configuración específica. (Se guardan en los metadatos de la conexión).
-   e. Vista previa de la cadena resultante
-   f. Confirmar → genera las conexiones
-```
-
-### Tres modos de cable
-
-#### 1. Cable del stock
-Selecciona un cable específico del inventario, filtrado por conector compatible:
-```
-Cable: ● Del stock
-       [🔍 CBL-XLR-010 - XLR M-F 50m ▾]
-       Filtrado: conector compatible, señal compatible, no asignado en esta config
-```
-Genera 2 conexiones: `equipo_A → cable → equipo_B`
-
-#### 2. Cable genérico (stub)
-Define los requisitos sin asignar un cable real — para planificación:
-```
-Cable: ● Cable genérico
-       Tipo: [XLR M-F ▾]
-       Largo mínimo: [10m___]
-       Señal: [Audio Analógico ▾]
-```
-Genera 2 conexiones con un cable virtual (`STUB_xxx`). Se guarda en metadatos de la conexión:
-```json
-{
-  "stub": true,
-  "requisitos": {
-    "tipo_conector": "XLR M-F",
-    "largo_minimo": 10,
-    "tipo_senial": "Audio Analógico"
-  }
-}
-```
-
-Representación visual en el árbol — borde punteado con icono de advertencia:
-```
-     ┌ ─ ─ ┼ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
-           │    ⚠ XLR M-F ≥10m
-     │     │    Sin asignar             │
-     └ ─ ─ ┼ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
-```
-
-**Asignación posterior**: click en un stub → muestra cables del stock que cumplen los requisitos → asignar.
-
-#### 3. Conexión directa (sin cable)
-Para equipos que se conectan directamente (ej: equipo montado encima de otro, conexión interna):
-```
-Cable: ● Conexión directa (sin cable)
-```
-Genera 1 sola conexión: `equipo_A → equipo_B`, sin nodo intermedio de cable. En el árbol no se muestra ficha de cable, solo la línea directa entre equipos.
-
-### Equipos stub (genéricos)
-
-Mismo concepto que cable stubs, pero para equipos. Un equipo stub es un placeholder que define qué tipo de equipo se necesita en una posición de la configuración sin asignar uno real del inventario.
-
-```
-Equipo destino: ● Del stock        [Seleccionar ▾]
-                ○ Equipo genérico
-                  Categoría: [Parlante ▾]
-                  Tipo: [Activo ▾]
-                  Notas: [≥300W, con entrada XLR]
-```
-
-Se guarda en `1_Equipos` con ID especial `STUB_EQ_xxx` y metadatos:
-```json
-{
-  "stub": true,
-  "requisitos": {
-    "categoria": "Parlante",
-    "tipo": "Activo",
-    "notas": "≥300W, con entrada XLR",
-    "puertos_necesarios": [
-      {"direccion": "entrada", "tipo_senial": "Audio Analógico", "conector": "XLR Hembra"}
-    ]
-  }
-}
-```
-
-Representación visual en el árbol — mismo estilo que cable stub (borde punteado, ⚠):
-```
-     ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
-       ⚠ Parlante Activo
-     │ ≥300W, con entrada XLR           │
-       Sin asignar
-     └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
-```
-
-**Asignación posterior**: click en un equipo stub → muestra equipos del stock que cumplen los requisitos → asignar.
-
-### Vista de necesidades logísticas (cables + equipos)
-
-Listado unificado que agrupa todos los stubs (cables y equipos) y compara con stock:
-
-```
-═══ NECESIDADES DE CONFIGURACIÓN ═══
-
-📦 Equipos sin asignar:
-  ⚠ 2x Parlante Activo ≥300W     — Stock disponible: 4
-  ⚠ 1x Micrófono Dinámico        — Stock disponible: 8
-
-🔌 Cables sin asignar:
-  ⚠ 3x XLR M-F ≥10m             — Stock disponible: 5
-  ⚠ 1x HDMI ≥5m                 — Stock disponible: 2
-```
-
-### Proposed Changes
-
-#### [MODIFY] [app.js](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/app.js)
-
-**Nuevo asistente `ConnectionWizard`:**
-
-- Función `openConnectionWizard(equipoId, puertoId?)` — abre modal, opcionalmente pre-selecciona un puerto
-- Para cada puerto del equipo, renderiza una tarjeta colapsable con:
-  - Selector de equipo destino: del stock (filtrado) o equipo genérico (stub)
-  - Selector de puerto destino en el equipo elegido
-  - Radio buttons cable: del stock / genérico / conexión directa
-  - Campos condicionales según la opción elegida
-  - Vista previa de la cadena que se va a crear
-- Función `getCompatibleEquipments(puerto)` — filtra por tipo de señal y dirección inversa
-- Función `getCompatibleCables(puertoOrigen, puertoDestino)` — filtra por conector compatible y disponibilidad
-- Función `getMatchingStockForStub(stub, type)` — busca items del stock que cumplen los requisitos de un stub (cable o equipo)
-- Función `generateConnectionsFromWizard(wizardData)` — genera las filas de conexión según el modo elegido
-- Función `assignToStub(stubId, realId)` — reemplaza un stub (cable o equipo) por un item real del stock
-- El asistente reemplaza al `formRuteo` actual y al `openBatchPatch()`
-
-**Vista de necesidades logísticas:**
-
-- Nueva función `renderNecesidades()` — lista todos los stubs (equipos + cables) agrupados por tipo
-- Compara con stock disponible: "Se necesitan 3x XLR M-F ≥10m — Disponibles: 5"
-- Permite asignación individual o masiva desde esta vista
-
-**Cambios en openBatchPatch / formulario de ruteo:**
-
-- El botón `hub` de la tabla admin ahora abre `openConnectionWizard()` en lugar del form actual
-- Se mantiene compatibilidad con conexiones existentes que no tengan puertos definidos
-
-#### [MODIFY] [index.html](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/index.html)
-
-- Template HTML para el wizard modal (cards de puertos, selectores filtrados, radio buttons de modo cable, preview de cadena)
-- Template para la vista de necesidades logísticas
-
-#### [MODIFY] [styles.css](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/styles.css)
-
-- `.wizard-modal`, `.wizard-port-card`, `.wizard-chain-preview`
-- `.wizard-cable-mode` — radio buttons con estilo de tarjeta seleccionable
-- `.wizard-stub-fields` — campos de requisitos para cable genérico
-- `.tree-cable-stub` — ficha de cable stub en el árbol (borde punteado, icono ⚠)
-- `.needs-list`, `.needs-item` — vista de necesidades logísticas
-- Animaciones de transición entre pasos
-
----
-
-## Fase 6 — Configuraciones de Conexión
-
-### Objetivo
-Gestionar múltiples configuraciones de conexiones para diferentes eventos o escenarios. Cada configuración representa un set completo de conexiones (qué equipo se conecta con qué). Una configuración es la **vigente** y es la que los usuarios ven al ingresar al sitio.
-
-### Arquitectura
-
-**Una hoja por configuración:**
-
-- La hoja base es `3_Conexiones` (configuración por defecto/principal)
-- Cada configuración adicional crea una hoja nueva: `3_Conexiones_reunion`, `3_Conexiones_exterior`, etc.
-- El sufijo es un slug sanitizado del nombre de la configuración
-
-En `4_Configuracion`, un registro de control:
-```
-ID_Configuracion: configuraciones
-Valor: <slug_config_activa>
-Metadatos: {
-  "configs": [
-    {"id": "default", "nombre": "Principal", "hoja": "3_Conexiones", "creada": 1714..., "autor": "..."},
-    {"id": "reunion", "nombre": "Reunión", "hoja": "3_Conexiones_reunion", ...},
-    {"id": "exterior", "nombre": "Evento Exterior", "hoja": "3_Conexiones_exterior", ...}
-  ]
-}
-```
-
-### Panel de administración de configuraciones
-
-Accesible desde la sección Admin. Permite:
-
-```
-═══ CONFIGURACIONES ═══════════════════
-
-  ★ Principal              ← vigente
-     23 conexiones │ Creada: 01/05/2026
-
-     Reunión
-     12 conexiones │ Creada: 03/05/2026
-     [📋 Copiar] [✏️ Renombrar] [🗑 Eliminar]
-
-     Evento Exterior
-     18 conexiones │ Creada: 04/05/2026
-     [📋 Copiar] [✏️ Renombrar] [🗑 Eliminar]
-
-  [+ Nueva configuración]
-  [📋 Copiar configuración vigente]
-```
-
-**Acciones:**
-
-| Acción | Descripción |
-|---|---|
-| **Crear nueva** | Crea hoja vacía `3_Conexiones_<slug>`, agrega a la lista |
-| **Copiar existente** | Duplica la hoja de una configuración con nuevo nombre |
-| **Eliminar** | Borra la hoja y el registro (protegida: no se puede eliminar la vigente) |
-| **Renombrar** | Cambia nombre visible, slug se mantiene |
-| **Establecer vigente** | Cambia `Valor` en el registro de control |
-
-### Navegación por configuración
-
-**Acceso por defecto** — sin parámetro URL, carga la configuración vigente:
-```
-https://sitio.com/              → carga config vigente (★ Principal)
-```
-
-**Acceso a configuración específica** — con parámetro `?config=slug`:
-```
-https://sitio.com/?config=reunion    → carga config "Reunión"
-https://sitio.com/?config=exterior   → carga config "Evento Exterior"
-```
-
-**Banner visual** cuando se está viendo una configuración que NO es la vigente:
-
-```
-┌──────────────────────────────────────────────────┐
-│  📋 Reunión  (no es la configuración vigente)    │
-│  [← Ir a la vigente]                             │
-└──────────────────────────────────────────────────┘
-```
-
-- Banner fijo (sticky top), color distintivo
-- Muestra solo el nombre de la configuración y aclara que no es la vigente
-- Botón para volver a la configuración vigente (recarga sin parámetro URL)
-
-**Indicador en sidebar** — siempre visible, debajo del título del sitio:
-```
-┌──────────────────────┐
-│  Audio y video ER2   │
-│  📋 Reunión          │  ← nombre de la config actual
-│  ─────────────────── │
-│  🔍 Buscar...        │
-│  ...                 │
-```
-Si es la vigente no se muestra nada (o se muestra con ★). Si es otra configuración, se muestra el nombre con estilo distintivo.
-
-### Proposed Changes
-
-#### [MODIFY] [Code.gs](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/app/Code.gs)
-
-- `doGet()` acepta parámetro `?config=slug` para leer de la hoja correspondiente
-- Si no se pasa `config`, lee de la hoja de la configuración vigente (leída de `4_Configuracion`)
-- Nuevas acciones POST:
-  - `CREATE_CONFIG` — crea hoja nueva vacía con estructura de columnas de `3_Conexiones`
-  - `COPY_CONFIG` — duplica hoja existente con nuevo slug
-  - `DELETE_CONFIG` — elimina hoja y registro (rechaza si es la vigente)
-  - `RENAME_CONFIG` — actualiza nombre en el registro de metadatos
-  - `SET_ACTIVE_CONFIG` — cambia el `Valor` del registro `configuraciones`
-
-#### [MODIFY] [app.js](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/app.js)
-
-- `fetchData()` lee parámetro URL `config` y lo pasa a `doGet()`. Sin parámetro → config vigente
-- `db.configActual` almacena el slug de la configuración cargada
-- `db.configVigente` almacena el slug de la configuración vigente (del registro de control)
-- Si `configActual !== configVigente` → muestra banner de configuración no vigente
-- Panel admin "Configuraciones" con funciones: `createConfig()`, `copyConfig()`, `deleteConfig()`, `renameConfig()`, `setActiveConfig()`
-- `switchConfig(slug)` → recarga con `?config=slug` en la URL
-- Todas las operaciones de escritura de conexiones usan la hoja de la configuración actual
-
-#### [MODIFY] [index.html](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/index.html)
-
-- Panel de gestión de configuraciones en la sección admin
-- Banner sticky para configuración no vigente (`#config-banner`)
-- Indicador de configuración actual en el header
-
-#### [MODIFY] [styles.css](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/styles.css)
-
-- `.config-banner` — banner sticky top, color de acento, con botones de acción
-- `.config-list-item` — item de configuración en el panel admin
-- `.config-active-badge` — indicador ★ para la configuración vigente
-
----
-
-## Fase 4 — Contenedores como Equipos
-
-> [!NOTE]
-> Renumerada sin cambio de contenido.
-
-### Objetivo
-Los contenedores (racks, cajas, baúles) se modelan como equipos reales con el flag `es_contenedor: true` en metadatos. Esto permite:
-- Verlos en el mapa topológico
-- Navegar desde un contenedor a su contenido
-- Navegar desde un equipo a su contenedor
-
-### Proposed Changes
-
-#### [MODIFY] [app.js](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/app.js)
-
-- En `renderTreeNode()` para el nodo central, si el equipo tiene `montado_en` o `Contenedor` que coincida con un ID de equipo contenedor, mostrar un link clicable
-- Nueva vista "Ver contenido" en la ficha de un equipo contenedor: lista todos los equipos con `Contenedor == ID_contenedor` o `montado_en == ID_contenedor`
-- En `renderInventory()`, agrupar por contenedor muestra contenedores como nodos expandibles con su contenido
-- En el formulario de edición de equipo, checkbox "Es contenedor" que setea `es_contenedor: true` en metadatos y cambia el icono
-- El campo `Contenedor` pasa a ser un selector que filtra por equipos marcados como contenedor
-
-#### [MODIFY] [topology.js](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/topology.js)
-
-- Los equipos contenedores se renderizan como nodos grupo (compound nodes) con borde punteado
-- Los equipos montados dentro se posicionan como hijos del contenedor en el layout ELK
 
 ---
 
@@ -1059,6 +721,209 @@ Al guardar, `syncMetadataFromUI()` ensambla el JSON final desde las 3 capas: cam
 
 ---
 
+## Fase 3 — Asistente de Conexionado
+
+### Objetivo
+Reemplazar el actual formulario de ruteo con un asistente guiado que, desde un equipo/puerto, permite elegir equipos destino filtrados por compatibilidad, y asignar cables con 3 modos: del stock, genérico (stub), o conexión directa.
+
+### Flujo del asistente
+
+```
+1. Se abre desde:
+   - Botón 🔗 en un puerto del formulario (Fase 2) → puerto pre-seleccionado
+   - Botón hub en tabla admin → equipo pre-seleccionado, wizard muestra todos sus puertos
+   - Menú de la ficha de operación
+
+2. Se muestran los puertos del equipo (definidos en metadatos)
+
+3. Para cada puerto:
+   a. Seleccionar equipo destino (filtrado por señal compatible y dirección inversa)
+   b. Seleccionar puerto destino del equipo elegido
+   c. Elegir modo de cable:
+
+      ○ Cable del stock    → selector filtrado por conector compatible
+      ○ Cable genérico     → definir requisitos (tipo, largo mín, señal)
+      ○ Conexión directa   → sin cable (equipo a equipo)
+
+   d. **(Nuevo) Ajustar parámetros**: Muestra los parámetros base del equipo destino y permite modificarlos para esta configuración específica. (Se guardan en los metadatos de la conexión).
+   e. Vista previa de la cadena resultante
+   f. Confirmar → genera las conexiones
+```
+
+### Tres modos de cable
+
+#### 1. Cable del stock
+Selecciona un cable específico del inventario, filtrado por conector compatible:
+```
+Cable: ● Del stock
+       [🔍 CBL-XLR-010 - XLR M-F 50m ▾]
+       Filtrado: conector compatible, señal compatible, no asignado en esta config
+```
+Genera 2 conexiones: `equipo_A → cable → equipo_B`
+
+#### 2. Cable genérico (stub)
+Define los requisitos sin asignar un cable real — para planificación:
+```
+Cable: ● Cable genérico
+       Tipo: [XLR M-F ▾]
+       Largo mínimo: [10m___]
+       Señal: [Audio Analógico ▾]
+```
+Genera 2 conexiones con un cable virtual (`STUB_xxx`). Se guarda en metadatos de la conexión:
+```json
+{
+  "stub": true,
+  "requisitos": {
+    "tipo_conector": "XLR M-F",
+    "largo_minimo": 10,
+    "tipo_senial": "Audio Analógico"
+  }
+}
+```
+
+Representación visual en el árbol — borde punteado con icono de advertencia:
+```
+     ┌ ─ ─ ┼ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+           │    ⚠ XLR M-F ≥10m
+     │     │    Sin asignar             │
+     └ ─ ─ ┼ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+```
+
+**Asignación posterior**: click en un stub → muestra cables del stock que cumplen los requisitos → asignar.
+
+#### 3. Conexión directa (sin cable)
+Para equipos que se conectan directamente (ej: equipo montado encima de otro, conexión interna):
+```
+Cable: ● Conexión directa (sin cable)
+```
+Genera 1 sola conexión: `equipo_A → equipo_B`, sin nodo intermedio de cable. En el árbol no se muestra ficha de cable, solo la línea directa entre equipos.
+
+### Equipos stub (genéricos)
+
+Mismo concepto que cable stubs, pero para equipos. Un equipo stub es un placeholder que define qué tipo de equipo se necesita en una posición de la configuración sin asignar uno real del inventario.
+
+```
+Equipo destino: ● Del stock        [Seleccionar ▾]
+                ○ Equipo genérico
+                  Categoría: [Parlante ▾]
+                  Tipo: [Activo ▾]
+                  Notas: [≥300W, con entrada XLR]
+```
+
+Se guarda en `1_Equipos` con ID especial `STUB_EQ_xxx` y metadatos:
+```json
+{
+  "stub": true,
+  "requisitos": {
+    "categoria": "Parlante",
+    "tipo": "Activo",
+    "notas": "≥300W, con entrada XLR",
+    "puertos_necesarios": [
+      {"direccion": "entrada", "tipo_senial": "Audio Analógico", "conector": "XLR Hembra"}
+    ]
+  }
+}
+```
+
+Representación visual en el árbol — mismo estilo que cable stub (borde punteado, ⚠):
+```
+     ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┐
+       ⚠ Parlante Activo
+     │ ≥300W, con entrada XLR           │
+       Sin asignar
+     └ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ┘
+```
+
+**Asignación posterior**: click en un equipo stub → muestra equipos del stock que cumplen los requisitos → asignar.
+
+### Vista de necesidades logísticas (cables + equipos)
+
+Listado unificado que agrupa todos los stubs (cables y equipos) y compara con stock:
+
+```
+═══ NECESIDADES DE CONFIGURACIÓN ═══
+
+📦 Equipos sin asignar:
+  ⚠ 2x Parlante Activo ≥300W     — Stock disponible: 4
+  ⚠ 1x Micrófono Dinámico        — Stock disponible: 8
+
+🔌 Cables sin asignar:
+  ⚠ 3x XLR M-F ≥10m             — Stock disponible: 5
+  ⚠ 1x HDMI ≥5m                 — Stock disponible: 2
+```
+
+### Proposed Changes
+
+#### [MODIFY] [app.js](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/app.js)
+
+**Nuevo asistente `ConnectionWizard`:**
+
+- Función `openConnectionWizard(equipoId, puertoId?)` — abre modal, opcionalmente pre-selecciona un puerto
+- Para cada puerto del equipo, renderiza una tarjeta colapsable con:
+  - Selector de equipo destino: del stock (filtrado) o equipo genérico (stub)
+  - Selector de puerto destino en el equipo elegido
+  - Radio buttons cable: del stock / genérico / conexión directa
+  - Campos condicionales según la opción elegida
+  - Vista previa de la cadena que se va a crear
+- Función `getCompatibleEquipments(puerto)` — filtra por tipo de señal y dirección inversa
+- Función `getCompatibleCables(puertoOrigen, puertoDestino)` — filtra por conector compatible y disponibilidad
+- Función `getMatchingStockForStub(stub, type)` — busca items del stock que cumplen los requisitos de un stub (cable o equipo)
+- Función `generateConnectionsFromWizard(wizardData)` — genera las filas de conexión según el modo elegido
+- Función `assignToStub(stubId, realId)` — reemplaza un stub (cable o equipo) por un item real del stock
+- El asistente reemplaza al `formRuteo` actual y al `openBatchPatch()`
+
+**Vista de necesidades logísticas:**
+
+- Nueva función `renderNecesidades()` — lista todos los stubs (equipos + cables) agrupados por tipo
+- Compara con stock disponible: "Se necesitan 3x XLR M-F ≥10m — Disponibles: 5"
+- Permite asignación individual o masiva desde esta vista
+
+**Cambios en openBatchPatch / formulario de ruteo:**
+
+- El botón `hub` de la tabla admin ahora abre `openConnectionWizard()` en lugar del form actual
+- Se mantiene compatibilidad con conexiones existentes que no tengan puertos definidos
+
+#### [MODIFY] [index.html](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/index.html)
+
+- Template HTML para el wizard modal (cards de puertos, selectores filtrados, radio buttons de modo cable, preview de cadena)
+- Template para la vista de necesidades logísticas
+
+#### [MODIFY] [styles.css](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/styles.css)
+
+- `.wizard-modal`, `.wizard-port-card`, `.wizard-chain-preview`
+- `.wizard-cable-mode` — radio buttons con estilo de tarjeta seleccionable
+- `.wizard-stub-fields` — campos de requisitos para cable genérico
+- `.tree-cable-stub` — ficha de cable stub en el árbol (borde punteado, icono ⚠)
+- `.needs-list`, `.needs-item` — vista de necesidades logísticas
+- Animaciones de transición entre pasos
+
+---
+
+## Fase 4 — Contenedores como Equipos
+
+### Objetivo
+Los contenedores (racks, cajas, baúles) se modelan como equipos reales con el flag `es_contenedor: true` en metadatos. Esto permite:
+- Verlos en el mapa topológico
+- Navegar desde un contenedor a su contenido
+- Navegar desde un equipo a su contenedor
+
+### Proposed Changes
+
+#### [MODIFY] [app.js](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/app.js)
+
+- En `renderTreeNode()` para el nodo central, si el equipo tiene `montado_en` o `Contenedor` que coincida con un ID de equipo contenedor, mostrar un link clicable
+- Nueva vista "Ver contenido" en la ficha de un equipo contenedor: lista todos los equipos con `Contenedor == ID_contenedor` o `montado_en == ID_contenedor`
+- En `renderInventory()`, agrupar por contenedor muestra contenedores como nodos expandibles con su contenido
+- En el formulario de edición de equipo, checkbox "Es contenedor" que setea `es_contenedor: true` en metadatos y cambia el icono
+- El campo `Contenedor` pasa a ser un selector que filtra por equipos marcados como contenedor
+
+#### [MODIFY] [topology.js](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/topology.js)
+
+- Los equipos contenedores se renderizan como nodos grupo (compound nodes) con borde punteado
+- Los equipos montados dentro se posicionan como hijos del contenedor en el layout ELK
+
+---
+
 ## Fase 5 — Gestión de Préstamos
 
 ### Objetivo
@@ -1102,6 +967,138 @@ Registrar préstamos de equipos y cables en los metadatos. Simplemente un histor
 - `.loan-banner` — banner de alerta de préstamo activo
 - `.loan-history-entry` — entrada en el historial de préstamos
 - `.loan-badge` — pastilla en tablas de inventario
+
+---
+
+## Fase 6 — Configuraciones de Conexión
+
+### Objetivo
+Gestionar múltiples configuraciones de conexiones para diferentes eventos o escenarios. Cada configuración representa un set completo de conexiones (qué equipo se conecta con qué). Una configuración es la **vigente** y es la que los usuarios ven al ingresar al sitio.
+
+### Arquitectura
+
+**Una hoja por configuración:**
+
+- La hoja base es `3_Conexiones` (configuración por defecto/principal)
+- Cada configuración adicional crea una hoja nueva: `3_Conexiones_reunion`, `3_Conexiones_exterior`, etc.
+- El sufijo es un slug sanitizado del nombre de la configuración
+
+En `4_Configuracion`, un registro de control:
+```
+ID_Configuracion: configuraciones
+Valor: <slug_config_activa>
+Metadatos: {
+  "configs": [
+    {"id": "default", "nombre": "Principal", "hoja": "3_Conexiones", "creada": 1714..., "autor": "..."},
+    {"id": "reunion", "nombre": "Reunión", "hoja": "3_Conexiones_reunion", ...},
+    {"id": "exterior", "nombre": "Evento Exterior", "hoja": "3_Conexiones_exterior", ...}
+  ]
+}
+```
+
+### Panel de administración de configuraciones
+
+Accesible desde la sección Admin. Permite:
+
+```
+═══ CONFIGURACIONES ═══════════════════
+
+  ★ Principal              ← vigente
+     23 conexiones │ Creada: 01/05/2026
+
+     Reunión
+     12 conexiones │ Creada: 03/05/2026
+     [📋 Copiar] [✏️ Renombrar] [🗑 Eliminar]
+
+     Evento Exterior
+     18 conexiones │ Creada: 04/05/2026
+     [📋 Copiar] [✏️ Renombrar] [🗑 Eliminar]
+
+  [+ Nueva configuración]
+  [📋 Copiar configuración vigente]
+```
+
+**Acciones:**
+
+| Acción | Descripción |
+|---|---|
+| **Crear nueva** | Crea hoja vacía `3_Conexiones_<slug>`, agrega a la lista |
+| **Copiar existente** | Duplica la hoja de una configuración con nuevo nombre |
+| **Eliminar** | Borra la hoja y el registro (protegida: no se puede eliminar la vigente) |
+| **Renombrar** | Cambia nombre visible, slug se mantiene |
+| **Establecer vigente** | Cambia `Valor` en el registro de control |
+
+### Navegación por configuración
+
+**Acceso por defecto** — sin parámetro URL, carga la configuración vigente:
+```
+https://sitio.com/              → carga config vigente (★ Principal)
+```
+
+**Acceso a configuración específica** — con parámetro `?config=slug`:
+```
+https://sitio.com/?config=reunion    → carga config "Reunión"
+https://sitio.com/?config=exterior   → carga config "Evento Exterior"
+```
+
+**Banner visual** cuando se está viendo una configuración que NO es la vigente:
+
+```
+┌──────────────────────────────────────────────────┐
+│  📋 Reunión  (no es la configuración vigente)    │
+│  [← Ir a la vigente]                             │
+└──────────────────────────────────────────────────┘
+```
+
+- Banner fijo (sticky top), color distintivo
+- Muestra solo el nombre de la configuración y aclara que no es la vigente
+- Botón para volver a la configuración vigente (recarga sin parámetro URL)
+
+**Indicador en sidebar** — siempre visible, debajo del título del sitio:
+```
+┌──────────────────────┐
+│  Audio y video ER2   │
+│  📋 Reunión          │  ← nombre de la config actual
+│  ─────────────────── │
+│  🔍 Buscar...        │
+│  ...                 │
+```
+Si es la vigente no se muestra nada (o se muestra con ★). Si es otra configuración, se muestra el nombre con estilo distintivo.
+
+### Proposed Changes
+
+#### [MODIFY] [Code.gs](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/app/Code.gs)
+
+- `doGet()` acepta parámetro `?config=slug` para leer de la hoja correspondiente
+- Si no se pasa `config`, lee de la hoja de la configuración vigente (leída de `4_Configuracion`)
+- Nuevas acciones POST:
+  - `CREATE_CONFIG` — crea hoja nueva vacía con estructura de columnas de `3_Conexiones`
+  - `COPY_CONFIG` — duplica hoja existente con nuevo slug
+  - `DELETE_CONFIG` — elimina hoja y registro (rechaza si es la vigente)
+  - `RENAME_CONFIG` — actualiza nombre en el registro de metadatos
+  - `SET_ACTIVE_CONFIG` — cambia el `Valor` del registro `configuraciones`
+
+#### [MODIFY] [app.js](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/app.js)
+
+- `fetchData()` lee parámetro URL `config` y lo pasa a `doGet()`. Sin parámetro → config vigente
+- `db.configActual` almacena el slug de la configuración cargada
+- `db.configVigente` almacena el slug de la configuración vigente (del registro de control)
+- Si `configActual !== configVigente` → muestra banner de configuración no vigente
+- Panel admin "Configuraciones" con funciones: `createConfig()`, `copyConfig()`, `deleteConfig()`, `renameConfig()`, `setActiveConfig()`
+- `switchConfig(slug)` → recarga con `?config=slug` en la URL
+- Todas las operaciones de escritura de conexiones usan la hoja de la configuración actual
+
+#### [MODIFY] [index.html](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/index.html)
+
+- Panel de gestión de configuraciones en la sección admin
+- Banner sticky para configuración no vigente (`#config-banner`)
+- Indicador de configuración actual en el header
+
+#### [MODIFY] [styles.css](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/styles.css)
+
+- `.config-banner` — banner sticky top, color de acento, con botones de acción
+- `.config-list-item` — item de configuración en el panel admin
+- `.config-active-badge` — indicador ★ para la configuración vigente
 
 ---
 
