@@ -78,10 +78,14 @@ Para nutrir el motor heurístico (Fast-Rail) y semántico (Semantic-Rail), el si
 ## 3. Especificación de Módulos Principales
 
 ### 3.1. Módulo de Planimetría y Setup Espacial (Stage Plot)
-Asiste en el diseño físico y la validación acústica previa al evento mediante un lienzo interactivo.
-*   **Recinto y PA:** Ingreso de dimensiones, temperatura, ubicación de PA principal y separación L/R.
-*   **Mapeo de Escenario:** Ubicación visual de micrófonos y monitores. El sistema evalúa silenciosamente la geometría y alerta si se violan reglas físicas (ej. regla 3:1 o cápsulas de rechazo incorrectas).
-*   **Arreglos de Delay:** Cálculo multicanal que entrega tiempos de retardo únicos para cada altavoz distribuido simétricamente desde el centro.
+Asiste en el diseño físico y la validación acústica previa al evento mediante un lienzo interactivo, actuando como un simulador predictivo offline.
+
+* **Contexto Ambiental (Cálculo Predictivo RT60):** Además del ancho y largo, el operador ingresa la altura del techo, los materiales predominantes (paredes, suelo) y la ocupación esperada. Mediante la ecuación de Sabine ($RT60 = \frac{0.161 \times V}{A}$), el hilo de JavaScript calcula el Tiempo de Reverberación estimado. Este valor parametriza la agresividad de las sugerencias del LLM en la fase de ecualización.
+* **Motor de Reglas Geométricas:** Al posicionar elementos en el lienzo 2D, el sistema cruza continuamente las coordenadas espaciales ($X, Y$) y los patrones polares declarados con las leyes acústicas del corpus RAG, lanzando advertencias proactivas *antes* del encendido del sistema:
+    * *Regla 3:1:* Alerta de *Comb Filtering* si la distancia entre dos micrófonos abiertos no triplica la distancia al orador.
+    * *Interacción Micrófono/Monitor:* Alerta de acople seguro si se coloca un monitor de piso en el lóbulo de captación trasero específico del micrófono (ej. advirtiendo que un Supercardioide requiere monitores a 120° y no a 180°).
+    * *Ley de la Inversa del Cuadrado:* Alerta de pérdida de relación señal/ruido si la distancia a la última fila requiere cajas de relevo (*Delay Towers*).
+* **Arreglos de Delay:** Cálculo multicanal que entrega tiempos de retardo únicos para cada altavoz distribuido, compensados por la temperatura ambiente ingresada.
 *   **Perfiles de Hardware (Calibration Data):** Asignación de curvas de respuesta a micrófonos y altavoces para compensar la Función de Transferencia.
 *   **Generador de Sweet Spots:** Indicación visual de los puntos matemáticamente ideales para medir.
 *   **Perfiles Genéricos de Seguridad (Agnostic Mode):** Cuando el operador no dispone del archivo de calibración exacto (`.cal` o `.txt`) del micrófono, el sistema no abortará, sino que solicitará identificar la *familia* física del micrófono para aplicar heurísticas de seguridad:
@@ -179,8 +183,9 @@ Auditoría continua y no intrusiva del evento en vivo.
 ### 3.8. Portabilidad y Flujo Asimétrico
 Separación de la responsabilidad de "Diseño" y "Operación" mediante la gestión del estado.
 
-#### 3.8.1. Estructura y Versionado del Payload de Configuración
-La exportación del estado (`.json`) validará contra un JSON Schema formal (draft-07).
+**3.8.1. Estructura y Versionado del Payload de Configuración**
+La exportación del estado (`.json`) validará contra un JSON Schema formal (draft-07), encapsulando no solo la electrónica, sino el modelo físico de la sala.
+
 ```json
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -189,11 +194,19 @@ La exportación del estado (`.json`) validará contra un JSON Schema formal (dra
   "properties": {
     "_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
     "metadata": { "type": "object", "properties": { "venueName": {"type": "string"} } },
-    "stagePlot": { "type": "object", "properties": { "width_m": {"type": "number"}, "mics": {"type": "array"} } },
+    "environmentalContext": { 
+        "type": "object", 
+        "properties": { 
+            "volume_m3": {"type": "number"}, 
+            "materials": {"type": "array"},
+            "estimatedRT60": {"type": "number"} 
+        } 
+    },
+    "stagePlot": { "type": "object", "properties": { "mics": {"type": "array"}, "speakers": {"type": "array"} } },
     "routingTopology": { "enum": ["PER_CHANNEL_EQ", "GLOBAL_STEREO"] },
     "eqInventory": { "enum": ["PEQ_PARAMETRIC", "GEQ_31BAND"] }
   },
-  "required": ["_version", "routingTopology"]
+  "required": ["_version", "environmentalContext", "routingTopology"]
 }
 ```
 *Política Backward Compatibility:* El importador soporta un delta de 2 versiones *Minor* hacia atrás mediante *Upcasting* in-memory (añadiendo valores predeterminados para claves nuevas).
@@ -230,3 +243,28 @@ Ante fallas inminentes de hardware del dispositivo anfitrión, el sistema provee
 
 *   **Open Sound Meter (OSM) -** [https://github.com/psmokotnin/osm](https://github.com/psmokotnin/osm): Arquitectura de referencia para el cálculo de Función de Transferencia (Magnitud, Fase y Coherencia) y alineamiento de retardo.
 *   **AutoEq -** [https://github.com/jaakkopasanen/AutoEq](https://github.com/jaakkopasanen/AutoEq): Base teórica para el cálculo de error entre medición y curva objetivo, y derivación de parámetros paramétricos.
+
+---
+
+## 7. Integración Futura con el Sistema de Gestión Audiovisual (AV Management SPA)
+
+Si bien la Plataforma Web de Asistencia Proactiva se concibe inicialmente como una herramienta independiente (*standalone*) enfocada puramente en el DSP y la calibración in-situ, su arquitectura de datos permite una integración natural y profunda con el **Sistema de Gestión de Inventario Audiovisual (AV Management SPA)** existente. 
+
+Esta convergencia transformará ambas plataformas en un ecosistema unificado que cubrirá desde la logística de almacén hasta la optimización acústica del evento.
+
+### 7.1. Sincronización de Inventario y Perfiles de Hardware
+En la fase integrada, el asistente dejará de depender de la entrada manual del inventario o del "Modo Agnóstico" forzado.
+*   **Lectura de Base de Datos:** El Asistente de Audio consumirá directamente la base de datos de equipos de la SPA (vía IndexedDB compartido o API local), importando automáticamente las especificaciones técnicas, patrones polares y curvas de respuesta de los micrófonos y altavoces asignados al evento.
+*   **Validación Logística:** Antes de sugerir un filtro o ruteo, el Asistente verificará si el hardware necesario (ej. un ecualizador gráfico adicional o un procesador de delay) está realmente disponible en el almacén o ya está asignado a ese evento específico.
+
+### 7.2. Convergencia de Topología (AntV X6 $\leftrightarrow$ Stage Plot)
+El módulo de *Stage Plot* del asistente y el mapa de *Topología de Red* (AntV X6) de la SPA compartirán el mismo modelo de datos subyacente.
+*   **Diseño Bidireccional:** Un operador podrá esbozar el ruteo de señal en la vista de topología de la SPA en el almacén. Al llegar al recinto, el técnico abrirá el Asistente de Audio y verá exactamente ese mismo ruteo pre-cargado, listo para la fase de medición acústica.
+*   **Persistencia de Calibración:** Los valores resultantes de la calibración (tiempos de delay precisos, filtros EQ aplicados, niveles de ganancia) se inyectarán como metadatos (`AvSetupPayload`) directamente en los nodos de los equipos dentro de la base de datos de la SPA, documentando el "estado final (*as-built*)" del evento para futuras referencias.
+
+### 7.3. Flujo de Trabajo Unificado (Warehouse to Stage)
+La integración permitirá un flujo de trabajo continuo y sin fricciones:
+1.  **Pre-Producción (SPA):** El productor reserva los equipos y diseña el diagrama de bloques (patching) en la oficina.
+2.  **Despliegue (SPA $\rightarrow$ Asistente):** El técnico de sala abre el evento en su tablet. La PWA lanza el *Asistente de Audio*, el cual auto-configura su contexto ambiental y perfiles de dispositivos en base a la reserva logística.
+3.  **Calibración (Asistente):** Se ejecuta el flujo guiado interactuando con el hardware físico y el entorno acústico.
+4.  **Cierre (Asistente $\rightarrow$ SPA):** Finalizado el show, el Asistente exporta el reporte de estado acústico e incidentes (ej. alertas de *feedback* recurrentes) de vuelta a la ficha del evento en la SPA, permitiendo auditorías de calidad técnica y documentando ajustes para futuros eventos en el mismo recinto.
