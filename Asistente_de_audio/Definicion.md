@@ -84,6 +84,11 @@ Asiste en el diseño físico y la validación acústica previa al evento mediant
 *   **Arreglos de Delay:** Cálculo multicanal que entrega tiempos de retardo únicos para cada altavoz distribuido simétricamente desde el centro.
 *   **Perfiles de Hardware (Calibration Data):** Asignación de curvas de respuesta a micrófonos y altavoces para compensar la Función de Transferencia.
 *   **Generador de Sweet Spots:** Indicación visual de los puntos matemáticamente ideales para medir.
+*   **Perfiles Genéricos de Seguridad (Agnostic Mode):** Cuando el operador no dispone del archivo de calibración exacto (`.cal` o `.txt`) del micrófono, el sistema no abortará, sino que solicitará identificar la *familia* física del micrófono para aplicar heurísticas de seguridad:
+    * *Variante A: Micrófono de Medición Genérico (Condensador Omnidireccional).* Se asume una respuesta relativamente plana pero con incertidumbre en los extremos. **Acción DSP:** Se mantiene la autoridad del cálculo matemático en el rango crítico (200 Hz - 8 kHz) con tolerancia de $\pm 3 \text{ dB}$, pero se aplica un fundido de ignorancia (*fade-out* de confianza) por debajo de 100 Hz y por encima de 10 kHz, restringiendo sugerencias de ecualización en esas zonas.
+    * *Variante B: Micrófono Vocal Genérico (Dinámico Cardioide).* Se asume una fuerte coloración geométrica (efecto proximidad) y un pico de presencia (típico de cápsulas tipo SM58 o e835). **Acción DSP:** El sistema carga una "Curva Inversa de Vocal Dinámico Promedio" para pre-compensar la lectura antes del análisis de la sala. Se prohíben por completo las sugerencias de aumento de ganancia (Boosts) y la tolerancia de planitud se relaja a $\pm 6 \text{ dB}$.
+    * *Altavoz Desconocido:* Se asume un margen dinámico limitado. El sistema restringe cualquier sugerencia de aumento de ganancia (Boost) a un máximo de +3 dB, permitiendo únicamente cortes (Notches/Atenuaciones) para resolver problemas.
+
 
 ### 3.2. Capa de Traducción de Hardware y Topología
 Adapta las matemáticas ideales a las capacidades de la consola del recinto.
@@ -91,9 +96,14 @@ Adapta las matemáticas ideales a las capacidades de la consola del recinto.
 *   **Topología:** Definición de independencia de buses (EQ Independiente vs. Global). Si las salidas están vinculadas, se calculan promedios espaciales de compromiso.
 *   **Filtro Adaptativo:** Traduce el filtro quirúrgico a movimientos exactos en los faders disponibles.
 
-### 3.3. Asistente Guiado de Calibración
-Flujo iterativo para ajustar la respuesta de los parlantes (PA/Delays/Monitores).
-*   **Ciclo Cerrado:** Dicta punto $\rightarrow$ Mide ruido rosa $\rightarrow$ Compara vs Curva Objetivo $\rightarrow$ Sugiere EQ $\rightarrow$ Verifica cambios.
+### 3.3. Asistente Guiado de Calibración (Arquitectura Híbrida "Centauro")
+El flujo de calibración utiliza un modelo de responsabilidad dividida, donde el cálculo matemático y la asistencia semántica operan en tándem para garantizar seguridad acústica y usabilidad.
+
+* **Fase Determinista (Cálculo de Filtros - DSP/WASM):** * El motor compara la medición de la sala contra la Curva Objetivo (STI).
+    * Utilizando algoritmos de derivación de filtros (basados en la lógica de *AutoEq*), el módulo WASM calcula matemáticamente el filtro inverso ideal (Ganancia, Frecuencia, Factor Q) necesario para aplanar el error. Este proceso es estricto y garantiza que nunca se sugieran ajustes destructivos.
+* **Fase Semántica (Traducción LLM):** * El hilo principal intercepta el filtro matemático ideal y consulta el *Inventario de Hardware* del recinto.
+    * El LLM local redacta la instrucción final, traduciendo los números fríos en directivas operativas específicas para la consola del usuario, explicando pedagógicamente el *porqué* del ajuste basándose en el corpus RAG.
+* **Desplazamiento de Autoridad (Semantic Override):** Cuando se opera bajo la *Variante B (Micrófono Vocal Genérico)*, la autoridad del diagnóstico se desplaza del motor DSP determinista al motor Semántico (LLM). El sistema interceptará las matemáticas dudosas y solicitará validación humana antes de mostrar el *Trace Math* (Ej. *"La medición sugiere un corte severo en 4 kHz, pero los micrófonos vocales suelen inflar esa zona artificialmente. ¿Sientes la voz sibilante o dolorosa al oído, o suena natural?"*)
 
 #### 3.3.1. Curva Objetivo de Referencia (Spoken Word)
 El Asistente utiliza una curva diseñada para maximizar el Índice de Transmisión de la Voz (STI):
@@ -101,6 +111,32 @@ El Asistente utiliza una curva diseñada para maximizar el Índice de Transmisi�
 *   **Roll-off de Baja Frecuencia (HPF):** Atenuación de $-3 \text{ dB/octava}$ por debajo de 150 Hz para mitigar efectos de sala y ruidos de manipulación.
 *   **Roll-off de Alta Frecuencia (LPF):** Atenuación suave de $-1.5 \text{ dB/octava}$ a partir de 4 kHz para minimizar fatiga y sibilancia.
 *   **Tolerancia:** Planitud de $\pm 3 \text{ dB}$ en el rango central; discrepancias menores no activan over-EQ. El usuario puede parametrizar el Tilt del Roll-off superior según la reverberación.
+* **Relajación de Tolerancia Adaptativa:** Cuando el sistema opera en "Modo Agnóstico" debido a la falta de datos técnicos del hardware, la tolerancia de planitud objetivo en el rango vocal central se relaja automáticamente de ±3 dB a **±6 dB**.
+  
+#### 3.3.2. Protocolo Estándar de Calibración (Metodología de Referencia)
+Para garantizar resultados predecibles y de grado profesional, el Asistente Guiado codifica un flujo de trabajo lineal basado en el análisis acústico de doble canal (Transformada de Fourier - FFT), tomando como referencia las metodologías de Bob McCarthy y el análisis de función de transferencia (Magnitud, Fase y Coherencia). 
+
+El sistema obligará al operador a seguir un orden de operaciones no destructivo, bloqueando pasos posteriores si no se cumplen las condiciones previas:
+
+1.  **Sincronización y Verificación (Delay Finder / Impulso):** * *Acción:* El sistema emite ruido rosa y calcula la Respuesta al Impulso (IR) para determinar el tiempo de vuelo exacto entre el altavoz y el micrófono de medición. 
+    * *Validación:* Se sincronizan las ventanas de análisis y se verifica la polaridad absoluta de los componentes.
+2.  **Ecualización de Altavoces (Magnitud):**
+    * *Acción:* Comparación de la respuesta de magnitud medida contra la "Curva Objetivo de Referencia" (Sección 3.3.1).
+    * *Validación:* El sistema sugiere filtros paramétricos (PEQ) dando prioridad a la atenuación (cortes) sobre la amplificación (boosts) para conservar el margen dinámico (headroom) y no sobrecargar los amplificadores.
+3.  **Alineamiento Temporal y de Fase (Crossover Espacial):**
+    * *Acción:* Al integrar altavoces de relevo (*Delay Towers*, *Front Fills*) o subgraves con el PA principal, el sistema guía al usuario a posicionar el micrófono en la zona de solapamiento equitativo.
+    * *Validación:* El sistema superpone las trazas de fase de ambos elementos y calcula el retardo (delay en milisegundos) necesario para alinear las pendientes de fase, garantizando una suma acústica constructiva y evitando el filtrado de peine (*Comb Filtering*).
+4.  **Nivelación y Sombreado (Level & Shading):**
+    * *Acción:* Ajuste final de la ganancia general de cada subsistema para lograr una varianza de Nivel de Presión Sonora (SPL) inferior a $\pm 3 \text{ dB}$ en toda el área de audiencia.
+
+
+#### 3.3.3. Renderizado Predictivo Interactivo (Trace Math Visualizer)
+Para dotar al operador de confianza visual antes de alterar la consola física, la UI implementa un lienzo de renderizado (Canvas API) que muestra la matemática de trazos en tiempo real.
+* **Capas de Visualización:** El visualizador superpone tres curvas simultáneas:
+    1.  *Medición Cruda (Measured):* El espectro con anomalías capturado por el motor WASM.
+    2.  *Filtro Inverso (EQ Target):* La curva del ecualizador calculada por el algoritmo.
+    3.  *Respuesta Prevista (Predicted):* Suma algebraica en decibelios ($R_{prevista} = R_{medida} + R_{filtro}$).
+* **Interacción de Pre-aplicación:** El operador puede ajustar los faders virtuales o controles paramétricos en la pantalla táctil. La *Respuesta Prevista* se recalcula y dibuja a 20 fps, permitiendo al usuario validar visualmente el resultado de la ecualización antes de tocar el hardware real.
 
 ### 3.4. Ecualización Semántica para Voz Hablada
 *   **Traducción Lenguaje $\rightarrow$ DSP:** El operador describe el problema auditivo (ej. "suena encajonado").
@@ -171,6 +207,7 @@ Ante fallas inminentes de hardware del dispositivo anfitrión, el sistema provee
 ---
 
 ## 4. Flujo de Datos Híbrido (Data Pipeline)
+** Inferencia y Traducción Híbrida:** El motor WASM arroja los parámetros matemáticos del filtro (AutoEq). JS ensambla un *System Prompt* oculto que incluye este filtro ideal y el hardware disponible. El **LLM en WebGPU** lo procesa y devuelve el *Smart Toast* con las instrucciones físicas para el operador.
 
 1.  **Ingesta Física:** Señal cruda $\rightarrow$ `MediaDevices API`.
 2.  **Análisis de Señal:** Extracción de espectro y descriptores psicoacústicos (Meyda.js / WebFFT / WASM).
