@@ -75,9 +75,34 @@ Para nutrir el motor heurístico (Fast-Rail) y semántico (Semantic-Rail), el si
 
 ---
 
-## 3. Especificación de Módulos Principales
+## 3. Arquitectura de Interfaz y Etapas Operativas
+La interfaz de usuario adopta una filosofía de **"Herramienta Profesional Primero, Asistente Después"**. 
 
-### 3.1. Módulo de Planimetría y Setup Espacial (Stage Plot)
+A nivel macro, la aplicación se divide en cuatro grandes áreas de trabajo. La navegación entre ellas es totalmente libre (ej. pestañas o menú lateral). A nivel micro (dentro de cada etapa), el operador tiene siempre **libertad manual para modificar** cualquier parámetro disponible. Los **Wizards (Asistentes Guiados) son estrictamente optativos**; actúan como utilidades bajo demanda a las que el usuario puede recurrir si requiere ayuda paso a paso para un proceso complejo.
+
+### 3.1. Fase 1: Planificación (Declaración de Contexto)
+Vista dedicada al diseño espacial. El usuario puede colocar y conectar libremente los equipos en el lienzo. Al iniciar un proyecto, el operador declara su **Contexto Administrativo**, el cual determina el "Nivel de Restricción" del Asistente (restringe las soluciones que la IA puede proponer, no al usuario):
+*   **A. Diseño Estricto (LBD):** Hardware y posiciones inmutables. El Asistente IA tiene prohibido sugerir cambios físicos.
+*   **B. Diseño Genérico (LBD):** Posiciones inmutables, hardware flexible. El Asistente IA puede sugerir reemplazos de equipos pero no reubicaciones.
+*   **C. Diseño Propio:** Libertad total. El Asistente IA puede sugerir cualquier optimización física.
+
+### 3.2. Fase 2: Instalación (Setup y Triage Físico)
+Área de trabajo enfocada en el hardware y ruteo eléctrico. El usuario puede ver vúmetros y alterar ruteos manualmente.
+*   *Asistencia Optativa:* **Checklist Pre-Vuelo**. Un botón de "Diagnosticar Hardware" que lanza un wizard para ayudar a encontrar cables rotos o ausencias de *phantom power*.
+
+### 3.3. Fase 3: Calibración (Alineamiento DSP)
+Área técnica que aloja las herramientas matemáticas. El operador avanzado puede utilizar el analizador de espectro (RTA) e inyectar filtros manualmente en total libertad.
+*   *Asistencia Optativa:* **Wizard de Delay** (guiado para sincronizar vías) y **AutoEq** (medición automatizada y sugerencia de filtros).
+
+### 3.4. Fase 4: Ejecución (El Copiloto en Vivo)
+El "Dashboard" principal para operar durante el show. Es una interfaz limpia enfocada en el monitoreo. 
+*   *Asistencia Optativa / Activa:* Monitoreo en segundo plano de Prevención de Acoples (AFE) a través de *Smart Toasts* que el usuario puede aceptar o descartar con un toque, y botones rápidos para aplicar compensaciones dinámicas según el orador.
+
+---
+
+## 4. Especificación de Módulos Principales
+
+### 4.1. Módulo de Planimetría y Setup Espacial (Stage Plot)
 Asiste en el diseño físico y la validación acústica previa al evento mediante un lienzo interactivo, actuando como un simulador predictivo offline.
 
 * **Contexto Ambiental (Cálculo Predictivo RT60):** Además del ancho y largo, el operador ingresa la altura del techo, los materiales predominantes (paredes, suelo) y la ocupación esperada. Mediante la ecuación de Sabine ($RT60 = \frac{0.161 \times V}{A}$), el hilo de JavaScript calcula el Tiempo de Reverberación estimado. Este valor parametriza la agresividad de las sugerencias del LLM en la fase de ecualización.
@@ -94,13 +119,13 @@ Asiste en el diseño físico y la validación acústica previa al evento mediant
     * *Altavoz Desconocido:* Se asume un margen dinámico limitado. El sistema restringe cualquier sugerencia de aumento de ganancia (Boost) a un máximo de +3 dB, permitiendo únicamente cortes (Notches/Atenuaciones) para resolver problemas.
 
 
-### 3.2. Capa de Traducción de Hardware y Topología
+### 4.2. Capa de Traducción de Hardware y Topología
 Adapta las matemáticas ideales a las capacidades de la consola del recinto.
 *   **Inventario:** Declaración del ecualizador disponible (Paramétrico, GEQ 31 bandas, Semiparamétrico).
 *   **Topología:** Definición de independencia de buses (EQ Independiente vs. Global). Si las salidas están vinculadas, se calculan promedios espaciales de compromiso.
 *   **Filtro Adaptativo:** Traduce el filtro quirúrgico a movimientos exactos en los faders disponibles.
 
-### 3.3. Asistente Guiado de Calibración (Arquitectura Híbrida "Centauro")
+### 4.3. Asistente Guiado de Calibración (Arquitectura Híbrida "Centauro")
 El flujo de calibración utiliza un modelo de responsabilidad dividida, donde el cálculo matemático y la asistencia semántica operan en tándem para garantizar seguridad acústica y usabilidad.
 
 * **Fase Determinista (Cálculo de Filtros - DSP/WASM):** * El motor compara la medición de la sala contra la Curva Objetivo (STI).
@@ -109,7 +134,7 @@ El flujo de calibración utiliza un modelo de responsabilidad dividida, donde el
     * El LLM local redacta la instrucción final, traduciendo los números fríos en directivas operativas específicas para la consola del usuario, explicando pedagógicamente el *porqué* del ajuste basándose en el corpus RAG.
 * **Desplazamiento de Autoridad (Semantic Override):** Cuando se opera bajo la *Variante B (Micrófono Vocal Genérico)*, la autoridad del diagnóstico se desplaza del motor DSP determinista al motor Semántico (LLM). El sistema interceptará las matemáticas dudosas y solicitará validación humana antes de mostrar el *Trace Math* (Ej. *"La medición sugiere un corte severo en 4 kHz, pero los micrófonos vocales suelen inflar esa zona artificialmente. ¿Sientes la voz sibilante o dolorosa al oído, o suena natural?"*)
 
-#### 3.3.1. Curva Objetivo de Referencia (Spoken Word)
+#### 4.3.1. Curva Objetivo de Referencia (Spoken Word)
 El Asistente utiliza una curva diseñada para maximizar el Índice de Transmisión de la Voz (STI):
 *   **Rango Vocal Central (250 Hz - 2 kHz):** Respuesta de magnitud plana ($0 \text{ dB}$).
 *   **Roll-off de Baja Frecuencia (HPF):** Atenuación de $-3 \text{ dB/octava}$ por debajo de 150 Hz para mitigar efectos de sala y ruidos de manipulación.
@@ -117,7 +142,7 @@ El Asistente utiliza una curva diseñada para maximizar el Índice de Transmisi�
 *   **Tolerancia:** Planitud de $\pm 3 \text{ dB}$ en el rango central; discrepancias menores no activan over-EQ. El usuario puede parametrizar el Tilt del Roll-off superior según la reverberación.
 * **Relajación de Tolerancia Adaptativa:** Cuando el sistema opera en "Modo Agnóstico" debido a la falta de datos técnicos del hardware, la tolerancia de planitud objetivo en el rango vocal central se relaja automáticamente de ±3 dB a **±6 dB**.
   
-#### 3.3.2. Protocolo Estándar de Calibración (Metodología de Referencia)
+#### 4.3.2. Protocolo Estándar de Calibración (Metodología de Referencia)
 Para garantizar resultados predecibles y de grado profesional, el Asistente Guiado codifica un flujo de trabajo lineal basado en el análisis acústico de doble canal (Transformada de Fourier - FFT), tomando como referencia las metodologías de Bob McCarthy y el análisis de función de transferencia (Magnitud, Fase y Coherencia). 
 
 El sistema obligará al operador a seguir un orden de operaciones no destructivo, bloqueando pasos posteriores si no se cumplen las condiciones previas:
@@ -125,7 +150,7 @@ El sistema obligará al operador a seguir un orden de operaciones no destructivo
 1.  **Sincronización y Verificación (Delay Finder / Impulso):** * *Acción:* El sistema emite ruido rosa y calcula la Respuesta al Impulso (IR) para determinar el tiempo de vuelo exacto entre el altavoz y el micrófono de medición. 
     * *Validación:* Se sincronizan las ventanas de análisis y se verifica la polaridad absoluta de los componentes.
 2.  **Ecualización de Altavoces (Magnitud):**
-    * *Acción:* Comparación de la respuesta de magnitud medida contra la "Curva Objetivo de Referencia" (Sección 3.3.1).
+    * *Acción:* Comparación de la respuesta de magnitud medida contra la "Curva Objetivo de Referencia" (Sección 4.3.1).
     * *Validación:* El sistema sugiere filtros paramétricos (PEQ) dando prioridad a la atenuación (cortes) sobre la amplificación (boosts) para conservar el margen dinámico (headroom) y no sobrecargar los amplificadores.
 3.  **Alineamiento Temporal y de Fase (Crossover Espacial):**
     * *Acción:* Al integrar altavoces de relevo (*Delay Towers*, *Front Fills*) o subgraves con el PA principal, el sistema guía al usuario a posicionar el micrófono en la zona de solapamiento equitativo.
@@ -134,7 +159,7 @@ El sistema obligará al operador a seguir un orden de operaciones no destructivo
     * *Acción:* Ajuste final de la ganancia general de cada subsistema para lograr una varianza de Nivel de Presión Sonora (SPL) inferior a $\pm 3 \text{ dB}$ en toda el área de audiencia.
 
 
-#### 3.3.3. Renderizado Predictivo Interactivo (Trace Math Visualizer)
+#### 4.3.3. Renderizado Predictivo Interactivo (Trace Math Visualizer)
 Para dotar al operador de confianza visual antes de alterar la consola física, la UI implementa un lienzo de renderizado (Canvas API) que muestra la matemática de trazos en tiempo real.
 * **Capas de Visualización:** El visualizador superpone tres curvas simultáneas:
     1.  *Medición Cruda (Measured):* El espectro con anomalías capturado por el motor WASM.
@@ -142,45 +167,45 @@ Para dotar al operador de confianza visual antes de alterar la consola física, 
     3.  *Respuesta Prevista (Predicted):* Suma algebraica en decibelios ($R_{prevista} = R_{medida} + R_{filtro}$).
 * **Interacción de Pre-aplicación:** El operador puede ajustar los faders virtuales o controles paramétricos en la pantalla táctil. La *Respuesta Prevista* se recalcula y dibuja a 20 fps, permitiendo al usuario validar visualmente el resultado de la ecualización antes de tocar el hardware real.
 
-### 3.4. Ecualización Semántica para Voz Hablada
+### 4.4. Ecualización Semántica para Voz Hablada
 *   **Traducción Lenguaje $\rightarrow$ DSP:** El operador describe el problema auditivo (ej. "suena encajonado").
 *   **Motor LLM Local:** Entrega instrucciones directas de EQ o compresión dinámica adaptadas al hardware físico.
 
-### 3.5. Módulo de Gestión de Conocimiento (Local RAG)
+### 4.5. Módulo de Gestión de Conocimiento (Local RAG)
 Garantiza asistencia técnica precisa, basada en literatura acústica comprobada.
 *   **Pre-compilación Offline:** Los textos se fragmentan y vectorizan generando un *Payload de Conocimiento* estático.
 *   **Inferencia en Vivo:** `Transformers.js` vectoriza la consulta y el motor de búsqueda vectorial recupera fragmentos clave para inyectarlos en el prompt del LLM.
 
-#### 3.5.1. Especificación del Corpus RAG
+#### 4.5.1. Especificación del Corpus RAG
 *   **Fuentes Primarias:** Extractos de "Sound Systems: Design and Optimization" (McCarthy), estándares IEC 60268-16 STI y fichas técnicas OEM de micrófonos (Shure MX, Sennheiser EW). *Se excluye categóricamente* todo material relacionado con técnicas de mezcla musical.
 *   **Estrategia y Tamaño:** Embeddings en inglés y español usando `Xenova/paraphrase-multilingual-MiniLM-L12-v2`. Presupuesto máximo del payload vectorial: **15 MB**.
 
-### 3.6. Prevención y Monitoreo de Acoples (AFE)
+### 4.6. Prevención y Monitoreo de Acoples (AFE)
 Sistema defensivo contra la retroalimentación.
 *   **Pitar la Sala (Pre-evento):** Sugiere Notch Filters quirúrgicos durante el proceso de ganancia inicial.
 *   **Modo Centinela:** Función activa durante todo el evento alertando de frecuencias persistentes.
 
-#### 3.6.1. Algoritmo de Detección AFE (Automatic Feedback Elimination)
+#### 4.6.1. Algoritmo de Detección AFE (Automatic Feedback Elimination)
 Sea $X(k, n)$ la magnitud del bin $k$ en el frame $n$. Se declara un precursor de feedback si se cumplen ambas condiciones por $M$ frames (Ventana temporal $\sim 100 \text{ ms}$):
 1.  **Crecimiento Exponencial:** Tasa que supera un umbral $\theta_{growth}$ (por defecto: $+3 \text{ dB / } 100 \text{ ms}$).
     $$ \Delta X = X(k, n) - X(k, n-1) > \theta_{growth} $$
 2.  **Tonalidad Aislada:** La energía supera el promedio de su vecindad espectral (ancho de ventana $W$).
     $$ X(k, n) > \frac{1}{2W+1} \sum_{i=k-W}^{k+W} X(i, n) + \theta_{prominence} $$
 
-### 3.7. Diagnóstico Proactivo (El Copiloto Acústico)
+### 4.7. Diagnóstico Proactivo (El Copiloto Acústico)
 Auditoría continua y no intrusiva del evento en vivo.
 *   **Optimización de Rendimiento:** El motor visual del hilo principal opera a 20 fps (con retención de picos y decaimiento suave) para evitar el sobrecalentamiento del equipo.
 
-#### 3.7.1. Arquitectura Dual-Rail para Smart Toasts
+#### 4.7.1. Arquitectura Dual-Rail para Smart Toasts
 *   **Carril Rápido (Fast-Rail):** Ejecutado 100% en JS. Latencia máxima SLA: < 200ms. Evalúa heurísticas predefinidas y descriptores de **Meyda.js**:
     1.  *Feedback Inminente:* Crecimiento > 3dB/100ms en banda estrecha. `Texto: "⚠️ Acople inminente en {Hz}. Aplique Notch {Q}."`
     2.  *Saturación (Clipping):* THD > 5% o señal > -0.5 dBFS sostenida por 500ms. `Texto: "⚠️ Saturación detectada. Reduzca ganancia de entrada."`
     3.  *Pérdida de Proximidad:* Caída > 6dB en 100-250 Hz. `Texto: "💡 Orador alejado. Sugerencia: Compense graves (+3dB en 150 Hz)."`
     4.  *Sibilancia Extrema:* Energía en 5-8 kHz supera a 1 kHz por > 12dB. `Texto: "💡 Exceso de sibilancia. Sugerencia: Corte paramétrico en {Hz}."`
     5.  *Efecto Caja:* Desbalance en los primeros coeficientes MFCC (Exceso en 300-500 Hz). `Texto: "💡 Voz encajonada. Sugerencia: Corte paramétrico de -4dB en {Hz}."`
-*   **Carril Semántico (Semantic-Rail):** Ejecutado por el LLM local para diagnósticos complejos bajo demanda ("¿Por qué la voz se escucha nasal solo al fondo?"). SLA de latencia: < 4 segundos.
+*   **Carril Semántico (Semantic-Rail):** Ejecutado por el LLM local para diagnósticos complejos bajo demanda ("¿Por qué la voz se escucha nasal solo al fondo?"). SLA de latencia: < 4 segundos. *Nota: Las sugerencias emitidas aquí son filtradas por el Nivel de Restricción declarado en la Fase de Planificación.*
 
-#### 3.7.2. Triage y Troubleshooting de Hardware Básico (Pre-Vuelo)
+#### 4.7.2. Triage y Troubleshooting de Hardware Básico (Pre-Vuelo)
 Un problema común es que usuarios novatos intentan diagnosticar problemas físicos obvios con ecualización. Antes de sugerir ajustes de DSP, el sistema ejecuta un diagnóstico híbrido (físico/algorítmico) para descartar fallas eléctricas o de ruteo.
 *   **Auto-detección mediante análisis:** Si el motor DSP detecta anomalías matemáticas extremas que no corresponden a acústica de sala, bloquea temporalmente el flujo de ecualización y lanza una alerta de hardware. Por ejemplo:
     ```javascript
@@ -194,10 +219,10 @@ Un problema común es que usuarios novatos intentan diagnosticar problemas físi
     *   *Zumbido/ruido constante:* "✓ ¿Cable balanceado? (XLR mejor que plug)", "✓ ¿Loops de tierra? Desconectar otras fuentes", "✓ ¿Luces dimmer cerca? Alejar cables".
     *   *Distorsión:* "✓ LED de clip encendido? → Baje ganancia 6dB", "✓ ¿Pad activado si es voz muy fuerte?", "✓ ¿Phantom power en un micro dinámico? → Apagar".
 
-### 3.8. Portabilidad y Flujo Asimétrico
+### 4.8. Portabilidad y Flujo Asimétrico
 Separación de la responsabilidad de "Diseño" y "Operación" mediante la gestión del estado.
 
-**3.8.1. Estructura y Versionado del Payload de Configuración**
+**4.8.1. Estructura y Versionado del Payload de Configuración**
 La exportación del estado (`.json`) validará contra un JSON Schema formal (draft-07), encapsulando no solo la electrónica, sino el modelo físico de la sala.
 
 ```json
@@ -225,13 +250,13 @@ La exportación del estado (`.json`) validará contra un JSON Schema formal (dra
 ```
 *Política Backward Compatibility:* El importador soporta un delta de 2 versiones *Minor* hacia atrás mediante *Upcasting* in-memory (añadiendo valores predeterminados para claves nuevas).
 
-#### 3.8.2. Modo de Emergencia y Exportación Imprimible (Failover)
+#### 4.8.2. Modo de Emergencia y Exportación Imprimible (Failover)
 Ante fallas inminentes de hardware del dispositivo anfitrión, el sistema provee salidas estáticas para garantizar la continuidad.
 *   **Disparadores:** Nivel de batería < 10% desconectada, desconexión del ADC, o botón manual "Panic Export".
 *   **Formato de Salida:** Generación de PDF offline (`jsPDF`) y Código QR codificando una cadena Base64.
 *   **Contenido Mínimo:** Matriz de Delays (distancia y ms), valores absolutos de EQ activos y umbrales de ganancia riesgosos.
 
-### 3.9. UX Adaptativa y Soporte Educativo Integrado
+### 4.9. UX Adaptativa y Soporte Educativo Integrado
 El sistema está diseñado para ser operado tanto por personas sin background técnico ni de audio profesional, como por técnicos experimentados (sin convertirse en un obstáculo para estos últimos).
 
 *   **Nivel Técnico del Usuario:** La plataforma determina explícitamente (mediante selección del usuario o evaluación de interacciones) el nivel de competencia (Básico, Intermedio, Avanzado).
@@ -241,14 +266,14 @@ El sistema está diseñado para ser operado tanto por personas sin background t�
 *   **Glosario Contextual Siempre Disponible:** Términos técnicos de la interfaz gráfica están vinculados al motor RAG local. Al interactuar con ellos, se despliega una definición rápida y pedagógica, permitiendo al usuario aprender sobre la marcha sin abandonar el flujo de trabajo.
 *   **Tutoriales Integrados:** Para niveles básicos, la interfaz incluye micro-tutoriales visuales o guías paso a paso durante el proceso de conexión y calibración.
 
-### 3.10. Gestión de Contextos Específicos de Voz Hablada
+### 4.10. Gestión de Contextos Específicos de Voz Hablada
 *   **Gestor de Múltiples Oradores (Pre-sets Dinámicos):** Al no ser viable tener una base de características exactas de cada orador previo al evento, el sistema implementa "Macro-Perfiles Generales" predefinidos (Ej. *Voz Masculina Grave*, *Voz Femenina Sibilante*, *Voz Débil/Lejana*). Esto permite aplicar compensaciones relativas inmediatas mediante botones rápidos (One-Tap) cuando hay un cambio repentino de orador en el escenario, adaptando los umbrales de seguridad y ecualización al vuelo.
 *   **Detector de Técnica de Micrófono (Conciencia Espacial):** El motor DSP diferencia acústicamente el uso del micrófono (ej. Micrófono en jirafa/atril frente a Micrófono de mano) mediante la variabilidad de bajas frecuencias (efecto proximidad), caídas temporales de agudos (fuera de eje) o incrementos nasales (orador tapando la cápsula).
     *   *Resolución de Técnica Deficiente:* Si el sistema advierte una mala técnica y resulta imposible ajustar la posición física (orador inmanejable), proveerá al usuario de un modo alternativo ("Workarounds"). Por ejemplo, si es un orador de atril muy alejado, sugerirá abandonar la "búsqueda de ecualización plana" y pasará a sugerir el uso de una Puerta de Ruido / Expansor, compresión con ratio suave para compensar la caída de señal, y un filtro pasa-altos mucho más agresivo para maximizar la inteligibilidad sacrificando calidad natural.
 
 ---
 
-## 4. Flujo de Datos Híbrido (Data Pipeline)
+## 5. Flujo de Datos Híbrido (Data Pipeline)
 ** Inferencia y Traducción Híbrida:** El motor WASM arroja los parámetros matemáticos del filtro (AutoEq). JS ensambla un *System Prompt* oculto que incluye este filtro ideal y el hardware disponible. El **LLM en WebGPU** lo procesa y devuelve el *Smart Toast* con las instrucciones físicas para el operador.
 
 1.  **Ingesta Física:** Señal cruda $\rightarrow$ `MediaDevices API`.
@@ -259,7 +284,7 @@ El sistema está diseñado para ser operado tanto por personas sin background t�
 
 ---
 
-## 5. Requisitos No Funcionales (RNF)
+## 6. Requisitos No Funcionales (RNF)
 
 *   **Autonomía Total (Offline-First):** Una vez guardados en caché los *assets* y *Payloads*, la app opera indefinidamente sin internet.
 *   **Rendimiento Sostenido (Thermal Management):** La división de procesamiento asíncrono y la reducción de renderizado visual a 20 fps deben garantizar operación continua (>8 horas) sin *thermal throttling*.
@@ -268,30 +293,30 @@ El sistema está diseñado para ser operado tanto por personas sin background t�
 
 ---
 
-## 6. Referencias y Repositorios Base (Open Source)
+## 7. Referencias y Repositorios Base (Open Source)
 
 *   **Open Sound Meter (OSM) -** [https://github.com/psmokotnin/osm](https://github.com/psmokotnin/osm): Arquitectura de referencia para el cálculo de Función de Transferencia (Magnitud, Fase y Coherencia) y alineamiento de retardo.
 *   **AutoEq -** [https://github.com/jaakkopasanen/AutoEq](https://github.com/jaakkopasanen/AutoEq): Base teórica para el cálculo de error entre medición y curva objetivo, y derivación de parámetros paramétricos.
 
 ---
 
-## 7. Integración Futura con el Sistema de Gestión Audiovisual (AV Management SPA)
+## 8. Integración Futura con el Sistema de Gestión Audiovisual (AV Management SPA)
 
 Si bien la Plataforma Web de Asistencia Proactiva se concibe inicialmente como una herramienta independiente (*standalone*) enfocada puramente en el DSP y la calibración in-situ, su arquitectura de datos permite una integración natural y profunda con el **Sistema de Gestión de Inventario Audiovisual (AV Management SPA)** existente. 
 
 Esta convergencia transformará ambas plataformas en un ecosistema unificado que cubrirá desde la logística de almacén hasta la optimización acústica del evento.
 
-### 7.1. Sincronización de Inventario y Perfiles de Hardware
+### 8.1. Sincronización de Inventario y Perfiles de Hardware
 En la fase integrada, el asistente dejará de depender de la entrada manual del inventario o del "Modo Agnóstico" forzado.
 *   **Lectura de Base de Datos:** El Asistente de Audio consumirá directamente la base de datos de equipos de la SPA (vía IndexedDB compartido o API local), importando automáticamente las especificaciones técnicas, patrones polares y curvas de respuesta de los micrófonos y altavoces asignados al evento.
 *   **Validación Logística:** Antes de sugerir un filtro o ruteo, el Asistente verificará si el hardware necesario (ej. un ecualizador gráfico adicional o un procesador de delay) está realmente disponible en el almacén o ya está asignado a ese evento específico.
 
-### 7.2. Convergencia de Topología (AntV X6 $\leftrightarrow$ Stage Plot)
+### 8.2. Convergencia de Topología (AntV X6 $\leftrightarrow$ Stage Plot)
 El módulo de *Stage Plot* del asistente y el mapa de *Topología de Red* (AntV X6) de la SPA compartirán el mismo modelo de datos subyacente.
 *   **Diseño Bidireccional:** Un operador podrá esbozar el ruteo de señal en la vista de topología de la SPA en el almacén. Al llegar al recinto, el técnico abrirá el Asistente de Audio y verá exactamente ese mismo ruteo pre-cargado, listo para la fase de medición acústica.
 *   **Persistencia de Calibración:** Los valores resultantes de la calibración (tiempos de delay precisos, filtros EQ aplicados, niveles de ganancia) se inyectarán como metadatos (`AvSetupPayload`) directamente en los nodos de los equipos dentro de la base de datos de la SPA, documentando el "estado final (*as-built*)" del evento para futuras referencias.
 
-### 7.3. Flujo de Trabajo Unificado (Warehouse to Stage)
+### 8.3. Flujo de Trabajo Unificado (Warehouse to Stage)
 La integración permitirá un flujo de trabajo continuo y sin fricciones:
 1.  **Pre-Producción (SPA):** El productor reserva los equipos y diseña el diagrama de bloques (patching) en la oficina.
 2.  **Despliegue (SPA $\rightarrow$ Asistente):** El técnico de sala abre el evento en su tablet. La PWA lanza el *Asistente de Audio*, el cual auto-configura su contexto ambiental y perfiles de dispositivos en base a la reserva logística.
