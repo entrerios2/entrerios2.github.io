@@ -105,7 +105,13 @@ El "Dashboard" principal para operar durante el show. Es una interfaz limpia enf
 ### 4.1. Módulo de Planimetría y Setup Espacial (Stage Plot)
 Asiste en el diseño físico y la validación acústica previa al evento mediante un lienzo interactivo, actuando como un simulador predictivo offline.
 
-* **Contexto Ambiental (Cálculo Predictivo RT60):** Además del ancho y largo, el operador ingresa la altura del techo, los materiales predominantes (paredes, suelo) y la ocupación esperada. Mediante la ecuación de Sabine ($RT60 = \frac{0.161 \times V}{A}$), el hilo de JavaScript calcula el Tiempo de Reverberación estimado. Este valor parametriza la agresividad de las sugerencias del LLM en la fase de ecualización.
+* **Contexto Ambiental (Cálculo Predictivo RT60 y Modos de Sala):** Además del ancho y largo, el operador ingresa la altura del techo, los materiales predominantes (paredes, suelo) y la ocupación esperada. Mediante la ecuación de Sabine ($RT60 = \frac{0.161 \times V}{A}$), el hilo de JavaScript calcula el Tiempo de Reverberación estimado. Este valor parametriza la agresividad de las sugerencias del LLM en la fase de ecualización. Adicionalmente, el sistema utiliza las dimensiones del recinto para predecir las ondas estacionarias graves (Modos de Sala). Si un micrófono es posicionado en el lienzo sobre un "nodo de presión", el Asistente sugiere desplazarlo físicamente para evitar retumbes.
+* **Definición de Altavoces (GLL vs Aproximación):** 
+    * *Importación GLL:* El sistema prioriza importar archivos estandarizados (tipo GLL o equivalente JSON) con la respuesta y dispersión 3D exacta.
+    * *Aproximación Paramétrica (Fallback):* Si no hay archivo oficial, el usuario puede ingresar la mayor cantidad de especificaciones manuales disponibles en el manual del equipo (ej. pulgadas del driver, frecuencia de cruce, dispersión nominal, rango de respuesta). El motor generará un globo de cobertura teórico optimizado en base a estos datos.
+* **Zonificación de Alturas:** El usuario puede dibujar polígonos etiquetados como "Escenario" o "Audiencia", asignándoles alturas relativas (Eje Z). Esto permite que el simulador entienda la elevación real del público frente a la tarima.
+* **Mapeo 2D de Cobertura SPL:** El lienzo proyecta isobáricas translúcidas frente a los altavoces, mostrando la caída de presión sonora. Simultáneamente, detecta zonas de "Comb Filtering" pintando de rojo las áreas de colisión si dos cajas se solapan destructivamente.
+* **Parámetros Espaciales de Montaje:** Cada altavoz cuenta con variables de "Altura Z" y "Tilt" (Inclinación). Si un altavoz apunta por encima de la audiencia, el Asistente advierte que se excitará la reverberación de la pared trasera.
 * **Motor de Reglas Geométricas:** Al posicionar elementos en el lienzo 2D, el sistema cruza continuamente las coordenadas espaciales ($X, Y$) y los patrones polares declarados con las leyes acústicas del corpus RAG, lanzando advertencias proactivas *antes* del encendido del sistema:
     * *Regla 3:1:* Alerta de *Comb Filtering* si la distancia entre dos micrófonos abiertos no triplica la distancia al orador.
     * *Interacción Micrófono/Monitor:* Alerta de acople seguro si se coloca un monitor de piso en el lóbulo de captación trasero específico del micrófono (ej. advirtiendo que un Supercardioide requiere monitores a 120° y no a 180°).
@@ -143,29 +149,29 @@ El Asistente utiliza una curva diseñada para maximizar el Índice de Transmisi�
 * **Relajación de Tolerancia Adaptativa:** Cuando el sistema opera en "Modo Agnóstico" debido a la falta de datos técnicos del hardware, la tolerancia de planitud objetivo en el rango vocal central se relaja automáticamente de ±3 dB a **±6 dB**.
   
 #### 4.3.2. Protocolo Estándar de Calibración (Metodología de Referencia)
-Para garantizar resultados predecibles y de grado profesional, el Asistente Guiado codifica un flujo de trabajo lineal basado en el análisis acústico de doble canal (Transformada de Fourier - FFT), tomando como referencia las metodologías de Bob McCarthy y el análisis de función de transferencia (Magnitud, Fase y Coherencia). 
+Para garantizar resultados predecibles y de grado profesional, el Asistente ofrece una metodología basada en el análisis acústico de doble canal (Transformada de Fourier - FFT). La arquitectura descarta flujos lineales bloqueantes en favor de **Mediciones Duales a Demanda**, permitiendo al usuario iterar manualmente.
 
-El sistema obligará al operador a seguir un orden de operaciones no destructivo, bloqueando pasos posteriores si no se cumplen las condiciones previas:
+1.  **Sincronización, Verificación y Benchmark (Log Sweep):**
+    * *Acción a Demanda:* El usuario dispara un Sweep logarítmico corto ("peeeeew"). Este estímulo es inmune al ruido de la sala.
+    * *Validación Interna:* El sistema extrae la Respuesta al Impulso (IR), el Tiempo de Vuelo absoluto para alinear ventanas de medición, y calcula un benchmark de **Índice de Transmisión de la Voz (STI)** guardando una "fotografía" (snapshot) de la respuesta en frecuencia de ese momento.
+2.  **Ecualización Interactiva de Altavoces (Magnitud / Ruido Rosa Estacionario):**
+    * *Acción a Demanda:* El usuario enciende el generador de Ruido Rosa para tener una lectura constante en el RTA. Puede mover los faders físicos en tiempo real comparando la respuesta de magnitud medida contra la "Curva Objetivo de Referencia" (Sección 4.3.1).
+    * *Validación:* Si el usuario solicita el *AutoEq*, el sistema sugiere filtros paramétricos (PEQ) dando prioridad estricta a la atenuación (cortes) sobre la amplificación (boosts) para conservar el margen dinámico (headroom) y no sobrecargar los amplificadores.
+3.  **Alineamiento Temporal Fino (Fase Desenrrollada Optativa):**
+    * *Acción:* Al integrar altavoces de relevo o subgraves, el sistema permite superponer visualmente la gráfica de *Fase Desenrrollada (Unwrapped Phase)* de ambos sistemas.
+    * *Validación:* El usuario cuenta con un control táctil para deslizar los milisegundos hasta que las dos curvas de fase se solapen perfectamente, asegurando suma constructiva real.
+4.  **Auditoría Final (STI vs Snapshot):**
+    * *Acción:* Tras realizar los cortes de ecualización y nivelación general, el usuario dispara un Sweep final. El sistema audita el resultado comparando el STI final frente al inicial, junto con los *snapshots* de los gráficos de respuesta en frecuencia (Antes y Después), otorgando una validación objetiva del progreso de calibración.
 
-1.  **Sincronización y Verificación (Delay Finder / Impulso):** * *Acción:* El sistema emite ruido rosa y calcula la Respuesta al Impulso (IR) para determinar el tiempo de vuelo exacto entre el altavoz y el micrófono de medición. 
-    * *Validación:* Se sincronizan las ventanas de análisis y se verifica la polaridad absoluta de los componentes.
-2.  **Ecualización de Altavoces (Magnitud):**
-    * *Acción:* Comparación de la respuesta de magnitud medida contra la "Curva Objetivo de Referencia" (Sección 4.3.1).
-    * *Validación:* El sistema sugiere filtros paramétricos (PEQ) dando prioridad a la atenuación (cortes) sobre la amplificación (boosts) para conservar el margen dinámico (headroom) y no sobrecargar los amplificadores.
-3.  **Alineamiento Temporal y de Fase (Crossover Espacial):**
-    * *Acción:* Al integrar altavoces de relevo (*Delay Towers*, *Front Fills*) o subgraves con el PA principal, el sistema guía al usuario a posicionar el micrófono en la zona de solapamiento equitativo.
-    * *Validación:* El sistema superpone las trazas de fase de ambos elementos y calcula el retardo (delay en milisegundos) necesario para alinear las pendientes de fase, garantizando una suma acústica constructiva y evitando el filtrado de peine (*Comb Filtering*).
-4.  **Nivelación y Sombreado (Level & Shading):**
-    * *Acción:* Ajuste final de la ganancia general de cada subsistema para lograr una varianza de Nivel de Presión Sonora (SPL) inferior a $\pm 3 \text{ dB}$ en toda el área de audiencia.
 
-
-#### 4.3.3. Renderizado Predictivo Interactivo (Trace Math Visualizer)
-Para dotar al operador de confianza visual antes de alterar la consola física, la UI implementa un lienzo de renderizado (Canvas API) que muestra la matemática de trazos en tiempo real.
-* **Capas de Visualización:** El visualizador superpone tres curvas simultáneas:
+#### 4.3.3. Renderizado Predictivo Interactivo y AutoEq a Voluntad
+Para dotar al operador de confianza visual antes de alterar la consola física, la UI implementa un lienzo de renderizado de "Matemática de Trazos Viva" (Trace Math Visualizer).
+* **Sugerencia de AutoEq a Voluntad:** El motor de cálculo inverso no es intrusivo. Cuando el usuario congela una medición en pantalla, puede pulsar el botón **"Sugerir EQ"**. En ese momento, el motor WASM calcula el filtro inverso ideal.
+* **Capas de Visualización:** El visualizador superpone entonces tres curvas simultáneas:
     1.  *Medición Cruda (Measured):* El espectro con anomalías capturado por el motor WASM.
-    2.  *Filtro Inverso (EQ Target):* La curva del ecualizador calculada por el algoritmo.
+    2.  *Filtro Inverso (EQ Target):* La sugerencia matemática generada a voluntad.
     3.  *Respuesta Prevista (Predicted):* Suma algebraica en decibelios ($R_{prevista} = R_{medida} + R_{filtro}$).
-* **Interacción de Pre-aplicación:** El operador puede ajustar los faders virtuales o controles paramétricos en la pantalla táctil. La *Respuesta Prevista* se recalcula y dibuja a 20 fps, permitiendo al usuario validar visualmente el resultado de la ecualización antes de tocar el hardware real.
+* **Interacción de Pre-aplicación:** El operador puede pre-visualizar el impacto de su ecualización. Si ajusta faders virtuales o altera la sugerencia manual, la *Respuesta Prevista* se recalcula instantáneamente, asegurando control predictivo total antes de tocar el hardware real.
 
 ### 4.4. Ecualización Semántica para Voz Hablada
 *   **Traducción Lenguaje $\rightarrow$ DSP:** El operador describe el problema auditivo (ej. "suena encajonado").
@@ -196,14 +202,16 @@ Sea $X(k, n)$ la magnitud del bin $k$ en el frame $n$. Se declara un precursor d
 Auditoría continua y no intrusiva del evento en vivo.
 *   **Optimización de Rendimiento:** El motor visual del hilo principal opera a 20 fps (con retención de picos y decaimiento suave) para evitar el sobrecalentamiento del equipo.
 
-#### 4.7.1. Arquitectura Dual-Rail para Smart Toasts
+#### 4.7.1. Arquitectura Dual-Rail y Muros de Seguridad DSP para Smart Toasts
+*   **Gráfico de Coherencia (El "Semáforo"):** Se inyecta una regla estricta de validación. Si la métrica de *Coherencia* de la Transformada de Fourier cae por debajo del 50% en una frecuencia particular, el Asistente bloquea temporalmente la sugerencia de *AutoEq* para esa zona, advirtiendo al operador que está intentando ecualizar un rebote acústico de la sala en lugar de sonido directo, lo cual es inútil y destructivo.
+*   **Espectrograma de Cascada (Waterfall Plot):** Herramienta diagnóstica primaria para el decaimiento. Se degrada desde un modelo 3D interactivo en Tier 2 a un mapa de calor 2D en Tier 0. Permite observar qué frecuencias tardan mucho en desaparecer en la sala, advirtiendo de acoples latentes antes de que el micrófono empiece a pitar.
 *   **Carril Rápido (Fast-Rail):** Ejecutado 100% en JS. Latencia máxima SLA: < 200ms. Evalúa heurísticas predefinidas y descriptores de **Meyda.js**:
     1.  *Feedback Inminente:* Crecimiento > 3dB/100ms en banda estrecha. `Texto: "⚠️ Acople inminente en {Hz}. Aplique Notch {Q}."`
     2.  *Saturación (Clipping):* THD > 5% o señal > -0.5 dBFS sostenida por 500ms. `Texto: "⚠️ Saturación detectada. Reduzca ganancia de entrada."`
     3.  *Pérdida de Proximidad:* Caída > 6dB en 100-250 Hz. `Texto: "💡 Orador alejado. Sugerencia: Compense graves (+3dB en 150 Hz)."`
     4.  *Sibilancia Extrema:* Energía en 5-8 kHz supera a 1 kHz por > 12dB. `Texto: "💡 Exceso de sibilancia. Sugerencia: Corte paramétrico en {Hz}."`
     5.  *Efecto Caja:* Desbalance en los primeros coeficientes MFCC (Exceso en 300-500 Hz). `Texto: "💡 Voz encajonada. Sugerencia: Corte paramétrico de -4dB en {Hz}."`
-*   **Carril Semántico (Semantic-Rail):** Ejecutado por el LLM local para diagnósticos complejos bajo demanda ("¿Por qué la voz se escucha nasal solo al fondo?"). SLA de latencia: < 4 segundos. *Nota: Las sugerencias emitidas aquí son filtradas por el Nivel de Restricción declarado en la Fase de Planificación.*
+*   **Carril Semántico (Semantic-Rail):** Ejecutado por el LLM local para diagnósticos complejos bajo demanda ("¿Por qué la voz se escucha nasal solo al fondo?"). SLA de latencia: < 4 segundos. *Nota: Las sugerencias emitidas aquí son filtradas por el Nivel de Restricción Administrativo declarado en la Fase de Planificación.*
 
 #### 4.7.2. Triage y Troubleshooting de Hardware Básico (Pre-Vuelo)
 Un problema común es que usuarios novatos intentan diagnosticar problemas físicos obvios con ecualización. Antes de sugerir ajustes de DSP, el sistema ejecuta un diagnóstico híbrido (físico/algorítmico) para descartar fallas eléctricas o de ruteo.
