@@ -33,6 +33,7 @@ El sistema implementa una evaluación de hardware en tiempo de ejecución para g
     *   *Condición:* Sin soporte de WebGPU (`!navigator.gpu`) o RAM total < 4GB.
     *   *Habilitado:* Análisis DSP completo (WASM/WebFFT), Smart Toasts basados en reglas rígidas (Fast-Rail).
     *   *Deshabilitado:* RAG semántico, inferencia en lenguaje natural, explicaciones detalladas.
+    *   *Fallback Pedagógico:* Para mantener la utilidad educativa sin IA, el sistema incluirá un set de **respuestas pre-compiladas (plantillas estáticas)** que cubren los diagnósticos más comunes del Fast-Rail con explicaciones detalladas pre-redactadas.
 *   **Tier 1 (Modo CPU SLM - Intermedio):**
     *   *Condición:* Sin WebGPU, pero con RAM $\ge$ 4GB y soporte WASM SIMD/Threads.
     *   *Habilitado:* RAG por similitud de cosenos, inferencia con modelos ultra-ligeros (<200M parámetros) vía ONNX Runtime Web.
@@ -58,15 +59,14 @@ async function detectTier() {
 }
 ```
 
-### 2.2. Estrategia de Procesamiento y Captura (AudioWorklet vs. Main Thread + WebFFT)
-El sistema evaluará dos arquitecturas fundamentales para la ingesta y análisis matemático (FFT) de la señal de audio, considerando las limitaciones del entorno web:
+### 2.2. Arquitectura de Captura y Procesamiento (AudioWorklet + WASM)
+El sistema adopta **AudioWorklet** como arquitectura definitiva de captura. La ingesta de audio se ejecuta en el hilo de audio isócrono, garantizando determinismo absoluto y cero pérdida de muestras. Esto es fundamental para la detección de transitorios de acople (AFE) ultra-rápidos.
 
-*   **Estrategia A (AudioWorklet + WASM Dedicado):** La captura ocurre en el hilo de audio isócrono. El audio se procesa en bloques secuenciales garantizados sin pérdida de muestras, alimentando un binario WASM local.
-    *   *Pro:* Determinismo absoluto. Cero muestras perdidas. Fundamental para detectar transitorios de acople (AFE) ultra-rápidos.
-    *   *Contra:* Mayor complejidad de desarrollo por la comunicación asíncrona entre hilos.
-*   **Estrategia B (Main Thread + AnalyserNode + WebFFT):** Se elimina el `AudioWorklet`. El hilo principal de JavaScript (donde corre la UI) extrae la forma de onda directamente de un `AnalyserNode` (vía `getFloatTimeDomainData`) y se la pasa a la librería *WebFFT* para el cálculo matemático dinámico.
-    *   *Pro:* Arquitectura extremadamente simple. *WebFFT* elige automáticamente el mejor motor de aceleración matemática para el dispositivo (WebGL, WASM o JS plano).
-    *   *Contra (Riesgo Crítico):* Falta de determinismo. Si el hilo principal se bloquea temporalmente, se pierden *buffers* enteros de audio, creando "puntos ciegos" para el algoritmo AFE.
+*   **Captura (AudioWorklet):** El audio crudo se procesa en bloques secuenciales garantizados dentro del contexto isócrono del AudioWorklet, alimentando un binario WASM local para el cálculo de FFT.
+*   **Transferencia (SharedArrayBuffer):** Los resultados del análisis se transfieren al hilo principal mediante `SharedArrayBuffer`, eliminando la sobrecarga de copias de datos entre hilos.
+*   **Visualización (Main Thread):** El hilo principal se limita exclusivamente al renderizado visual (Canvas, UI Svelte) y a la lógica de negocio (Smart Toasts, RAG, LLM).
+
+> *Nota: Esta arquitectura requiere que el servidor envíe las cabeceras HTTP `Cross-Origin-Opener-Policy: same-origin` y `Cross-Origin-Embedder-Policy: require-corp` para habilitar `SharedArrayBuffer`. Ver Matriz de Compatibilidad en Sección 6.*
 
 ### 2.3. Motor de Extracción de Características Acústicas (Meyda.js)
 Para nutrir el motor heurístico (Fast-Rail) y semántico (Semantic-Rail), el sistema integrará la librería **Meyda.js** como capa de abstracción para la extracción de características acústicas, procesando los *buffers* directamente dentro del contexto asíncrono del `AudioWorklet` o acoplado al hilo principal según la estrategia de captura seleccionada.
@@ -141,6 +141,8 @@ Asiste en el diseño físico y la validación acústica previa al evento mediant
     * *Variante B: Micrófono Vocal Genérico (Dinámico Cardioide).* Se asume una fuerte coloración geométrica (efecto proximidad) y un pico de presencia (típico de cápsulas tipo SM58 o e835). **Acción DSP:** El sistema carga una "Curva Inversa de Vocal Dinámico Promedio" para pre-compensar la lectura antes del análisis de la sala. Se prohíben por completo las sugerencias de aumento de ganancia (Boosts) y la tolerancia de planitud se relaja a $\pm 6 \text{ dB}$.
     * *Altavoz Desconocido:* Se asume un margen dinámico limitado. El sistema restringe cualquier sugerencia de aumento de ganancia (Boost) a un máximo de +3 dB, permitiendo únicamente cortes (Notches/Atenuaciones) para resolver problemas.
 
+> **Faseado de Implementación del Stage Plot:** El MVP incluye: sala rectangular con dimensiones, posiciones XY de equipos, cálculo de Delays por temperatura, RT60 (Sabine), Modos de Sala y Reglas Geométricas. Las funcionalidades de alta complejidad (importación GLL, globos de cobertura, mapeo SPL con isobáricas, detección visual de Comb Filtering) se desarrollarán en una fase avanzada posterior.
+
 
 ### 4.2. Capa de Traducción de Hardware y Telemetría Bidireccional
 Adapta las matemáticas ideales a las capacidades físicas y lógicas de la consola del recinto, incorporando control remoto opcional cuando hay consolas digitales compatibles.
@@ -150,6 +152,8 @@ Adapta las matemáticas ideales a las capacidades físicas y lógicas de la cons
 *   **Niveles de Autorización (Autopilot vs Copilot):** El sistema nunca altera la consola sin permiso. El usuario puede configurar el nivel de autonomía del sistema:
     *   *Modo Estricto (Por Defecto):* Requiere que el usuario presione el botón "Aplicar a Consola" para ejecutar cualquier sugerencia de ecualización o ruteo.
     *   *Modo Semiautomático (Bounded Auto-Pilot):* El usuario permite cambios automáticos pero bajo límites matemáticos. Por ejemplo: *"Permitir al Asistente inyectar filtros Notch automáticos si detecta un acople inminente, pero con un límite máximo de atenuación de -6dB, y requerir aprobación humana para cualquier aumento (boost) de ganancia."*
+*   **Auto-descubrimiento de Consolas (mDNS/Bonjour):** En la versión Tauri, el sistema detecta automáticamente consolas compatibles en la red local vía mDNS (ej. servicios `_osc._udp`), mostrando al usuario las consolas disponibles sin necesidad de ingresar IPs manualmente.
+*   **Undo/Rollback OSC (Snapshot de Canal):** Antes de enviar cualquier comando OSC a la consola, el sistema lee y almacena el estado previo del parámetro afectado. Un botón de "Deshacer Último Cambio" permite revertir al estado anterior, protegiendo contra errores en Modo Semiautomático.
 
 ### 4.3. Asistente Guiado de Calibración (Arquitectura Híbrida "Centauro")
 El flujo de calibración utiliza un modelo de responsabilidad dividida, donde el cálculo matemático y la asistencia semántica operan en tándem para garantizar seguridad acústica y usabilidad.
@@ -173,15 +177,24 @@ Para garantizar resultados predecibles y de grado profesional, el Asistente ofre
 
 1.  **Sincronización, Verificación y Benchmark (Log Sweep):**
     * *Acción a Demanda:* El usuario dispara un Sweep logarítmico corto ("peeeeew"). Este estímulo es inmune al ruido de la sala.
-    * *Validación Interna:* El sistema extrae la Respuesta al Impulso (IR), el Tiempo de Vuelo absoluto para alinear ventanas de medición, y calcula un benchmark de **Índice de Transmisión de la Voz (STI)** guardando una "fotografía" (snapshot) de la respuesta en frecuencia de ese momento.
+    * *Validación Interna:* El sistema extrae la Respuesta al Impulso (IR), el Tiempo de Vuelo absoluto para alinear ventanas de medición, y calcula un benchmark de **Índice de Transmisión de la Voz Estimado (STI-Est, desde IR)** guardando una "fotografía" (snapshot) de la respuesta en frecuencia de ese momento.
 2.  **Ecualización Interactiva de Altavoces (Magnitud / Ruido Rosa Estacionario):**
     * *Acción a Demanda:* El usuario enciende el generador de Ruido Rosa para tener una lectura constante en el RTA. Puede mover los faders físicos en tiempo real comparando la respuesta de magnitud medida contra la "Curva Objetivo de Referencia" (Sección 4.3.1).
     * *Validación:* Si el usuario solicita el *AutoEq*, el sistema sugiere filtros paramétricos (PEQ) dando prioridad estricta a la atenuación (cortes) sobre la amplificación (boosts) para conservar el margen dinámico (headroom) y no sobrecargar los amplificadores.
 3.  **Alineamiento Temporal Fino (Fase Desenrrollada Optativa):**
     * *Acción:* Al integrar altavoces de relevo o subgraves, el sistema permite superponer visualmente la gráfica de *Fase Desenrrollada (Unwrapped Phase)* de ambos sistemas.
     * *Validación:* El usuario cuenta con un control táctil para deslizar los milisegundos hasta que las dos curvas de fase se solapen perfectamente, asegurando suma constructiva real.
-4.  **Auditoría Final (STI vs Snapshot):**
-    * *Acción:* Tras realizar los cortes de ecualización y nivelación general, el usuario dispara un Sweep final. El sistema audita el resultado comparando el STI final frente al inicial, junto con los *snapshots* de los gráficos de respuesta en frecuencia (Antes y Después), otorgando una validación objetiva del progreso de calibración.
+4.  **Auditoría Final (STI-Est vs Snapshot):**
+    * *Acción:* Tras realizar los cortes de ecualización y nivelación general, el usuario dispara un Sweep final. El sistema audita el resultado comparando el STI Estimado final frente al inicial, junto con los *snapshots* de los gráficos de respuesta en frecuencia (Antes y Después), otorgando una validación objetiva del progreso de calibración.
+
+#### 4.3.2a. Promediado Espacial Multi-punto (Medición Guiada)
+Para evitar ecualizar anomalías específicas de un solo punto de escucha, el sistema guía activamente al usuario para realizar mediciones en múltiples posiciones representativas de la audiencia (3-6 puntos), indicando visualmente en el Stage Plot dónde colocar el micrófono en cada paso (ej. *"Medición 2 de 4: Coloque el micrófono en la primera fila izquierda"*). El motor DSP promedia las respuestas capturadas para generar una curva de compromiso espacial más representativa. El módulo de "Generador de Sweet Spots" (Sección 4.1) se integra directamente con este flujo.
+
+#### 4.3.2b. Modo de Ensayo (Rehearsal Mode)
+Durante la prueba de sonido previa al evento, el sistema puede entrar en un "Modo Ensayo" como parte del proceso de calibración:
+*   Las sugerencias del Copiloto operan con agresividad total (sin restricciones de tolerancia).
+*   Se permite experimentar con filtros más radicales que luego se suavizan para el evento real.
+*   Se documenta automáticamente un **"Cheat Sheet" del recinto** (frecuencias problemáticas, delays óptimos, ganancia máxima antes de feedback) para referencia rápida durante el evento.
 
 
 #### 4.3.3. Renderizado Predictivo Interactivo y AutoEq a Voluntad
@@ -241,6 +254,10 @@ Auditoría continua y no intrusiva del evento en vivo.
     4.  *Sibilancia Extrema:* Energía en 5-8 kHz supera a 1 kHz por > 12dB. `Texto: "💡 Exceso de sibilancia. Sugerencia: Corte paramétrico en {Hz}."`
     5.  *Efecto Caja:* Desbalance en los primeros coeficientes MFCC (Exceso en 300-500 Hz). `Texto: "💡 Voz encajonada. Sugerencia: Corte paramétrico de -4dB en {Hz}."`
 *   **Carril Semántico (Semantic-Rail):** Ejecutado por el LLM local para diagnósticos complejos bajo demanda ("¿Por qué la voz se escucha nasal solo al fondo?"). SLA de latencia: < 4 segundos. *Nota: Las sugerencias emitidas aquí son filtradas por el Nivel de Restricción Administrativo declarado en la Fase de Planificación.*
+*   **Indicador de Confianza:** Todo Smart Toast incluye un indicador visual de confianza (🟢 Alta / 🟡 Media / 🔴 Baja) basado en: coherencia de la medición, calidad de la calibración del micrófono (archivo `.cal` vs Modo Agnóstico), nivel de señal (SNR) y si se utilizó promediado espacial o medición de punto único. El nivel de confianza también **modula el tono lingüístico** del mensaje, reforzando la percepción del operador:
+    *   *🟢 Alta — Tono Directivo:* `"⚠️ Acople en 2.5 kHz. Active Notch Q=10, -6dB."`
+    *   *🟡 Media — Tono Sugestivo:* `"💡 Posible acople en ~2.5 kHz. Tal vez ayude un Notch suave."`
+    *   *🔴 Baja — Tono Informativo:* `"ℹ️ Se observa actividad persistente cerca de 2.5 kHz. Verificar manualmente."`
 
 #### 4.7.2. Triage y Asistente de Ruteo Físico (Pre-Vuelo)
 Un problema común es que usuarios novatos intentan diagnosticar problemas físicos obvios con ecualización, o se frustran por limitaciones de hardware (falta de placas de sonido dedicadas). Antes de sugerir ajustes de DSP, el sistema ejecuta un diagnóstico híbrido (físico/algorítmico) y un "Onboarding" de hardware para descartar fallas eléctricas o de ruteo:
@@ -319,6 +336,7 @@ Para optimizar el rol del Asistente durante el evento en vivo, el sistema permit
 *   **Ingesta de Datos y Estructura JSON:** El sistema incluirá una interfaz de carga nativa donde el usuario puede construir el itinerario. Los datos se persisten en un formato JSON estructurado que desglosa el evento en bloques y secciones específicas:
     ```json
     {
+      "_version": "1.0.0",
       "orden": 1,
       "titulo": "Apertura",
       "orador": "Juan Perez",
@@ -338,6 +356,12 @@ Para optimizar el rol del Asistente durante el evento en vivo, el sistema permit
     *   **Suspensión Inteligente del AFE:** Cuando la guía marca una sección tipo `"video"`, el sistema asume la entrada de energía acústica musical/efectos y suspende temporalmente los algoritmos de Prevención de Acoples (AFE) para evitar falsas alarmas de retroalimentación.
     *   **Aplicación Opcional de Perfiles de Voz:** Si en la carga del programa se definió de antemano el perfil del orador, el sistema mostrará la sugerencia de cargar ese EQ. Adicionalmente, el sistema ofrecerá una configuración donde la **aplicación automática de este perfil de voz queda a criterio y autorización explícita del usuario** (pudiendo permitir que el Asistente lo inyecte por sí solo al avanzar de sección).
 
+### 4.12. Memoria de Recinto (Venue Memory)
+El sistema almacena un historial de calibraciones indexado por recinto. Cuando el usuario regresa a un lugar previamente calibrado:
+*   **Punto de Partida:** Carga la calibración anterior (delays, filtros EQ, ganancia) como configuración inicial, acelerando significativamente el proceso.
+*   **Detección de Degradación:** Compara la respuesta de frecuencia actual contra la histórica. Una caída notable en agudos podría indicar un driver dañado; un cambio en el RT60 podría indicar modificaciones en el recinto.
+*   **Tendencias Recurrentes:** Identifica patrones repetitivos (ej. *"En las últimas 3 visitas a este recinto, siempre se detectó acople en 2.5 kHz. Considere un Notch permanente."*).
+
 ---
 
 ## 5. Flujo de Datos Híbrido (Data Pipeline)
@@ -356,7 +380,20 @@ Para optimizar el rol del Asistente durante el evento en vivo, el sistema permit
 *   **Autonomía Total (Offline-First):** Una vez guardados en caché los *assets* y *Payloads*, la app opera indefinidamente sin internet.
 *   **Rendimiento Sostenido (Thermal Management):** La división de procesamiento asíncrono y la reducción de renderizado visual a 20 fps deben garantizar operación continua (>8 horas) sin *thermal throttling*.
 *   **Privacidad Nativa:** Cero telemétrica. Ningún audio o texto abandona el dispositivo.
-*   **Usabilidad en Baja Iluminación:** Interfaz minimalista de alto contraste optimizada para Front of House (FOH).
+*   **Interfaz de Alto Contraste:** Interfaz legible con colores contrastantes, targets táctiles razonables y tipografía clara.
+
+### 6.1. Matriz de Compatibilidad de Navegadores
+
+| Funcionalidad | Chrome/Edge | Firefox | Safari (iOS/macOS) |
+|:-------------|:-----------:|:-------:|:------------------:|
+| AudioWorklet | ✅ | ✅ | ✅ (desde v15.4) |
+| SharedArrayBuffer | ✅ (requiere COOP/COEP) | ✅ (requiere COOP/COEP) | ✅ (requiere COOP/COEP) |
+| WebGPU (Tier 2) | ✅ | ⚠️ Experimental | ⚠️ Parcial |
+| `navigator.deviceMemory` | ✅ | ❌ (fallback a 2GB) | ❌ (fallback a 2GB) |
+| Web MIDI API | ✅ | ❌ | ❌ |
+| `AudioContext` auto-start | ✅ | ✅ | ❌ (requiere gesto de usuario) |
+
+> *Nota: La versión Tauri (Nativa) utiliza WebView2 (Chromium) en Windows y WebKit en macOS, por lo que la compatibilidad se alinea con Chrome/Edge y Safari respectivamente.*
 
 ---
 
@@ -367,7 +404,15 @@ Para optimizar el rol del Asistente durante el evento en vivo, el sistema permit
 
 ---
 
-## 8. Integración Futura con el Sistema de Gestión Audiovisual (AV Management SPA)
+## 8. Estrategia de Verificación y Validación
+Para los módulos críticos de seguridad acústica, el proyecto implementará una estrategia formal de testing:
+*   **Motor AFE (Prevención de Acoples):** Validación contra datasets de audio con acoples conocidos. Se medirá la tasa de detección correcta y la tasa de falsos positivos.
+*   **Motor AutoEq (Derivación de Filtros):** Tests unitarios que verifiquen que los filtros sugeridos nunca excedan los límites de seguridad (ganancia máxima, cantidad máxima de boost) bajo ninguna combinación de entrada.
+*   **Comandos OSC (Telemetría):** Tests de integración que validen la correcta traducción de parámetros internos a la sintaxis OSC específica de cada consola soportada, incluyendo la verificación del mecanismo de Undo/Snapshot.
+
+---
+
+## 9. Integración Futura con el Sistema de Gestión Audiovisual (AV Management SPA)
 
 Si bien la Plataforma Web de Asistencia Proactiva se concibe inicialmente como una herramienta independiente (*standalone*) enfocada puramente en el DSP y la calibración in-situ, su arquitectura de datos permite una integración natural y profunda con el **Sistema de Gestión de Inventario Audiovisual (AV Management SPA)** existente. 
 
