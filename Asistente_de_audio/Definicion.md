@@ -142,11 +142,14 @@ Asiste en el diseño físico y la validación acústica previa al evento mediant
     * *Altavoz Desconocido:* Se asume un margen dinámico limitado. El sistema restringe cualquier sugerencia de aumento de ganancia (Boost) a un máximo de +3 dB, permitiendo únicamente cortes (Notches/Atenuaciones) para resolver problemas.
 
 
-### 4.2. Capa de Traducción de Hardware y Topología
-Adapta las matemáticas ideales a las capacidades de la consola del recinto.
-*   **Inventario:** Declaración del ecualizador disponible (Paramétrico, GEQ 31 bandas, Semiparamétrico).
-*   **Topología:** Definición de independencia de buses (EQ Independiente vs. Global). Si las salidas están vinculadas, se calculan promedios espaciales de compromiso.
-*   **Filtro Adaptativo:** Traduce el filtro quirúrgico a movimientos exactos en los faders disponibles.
+### 4.2. Capa de Traducción de Hardware y Telemetría Bidireccional
+Adapta las matemáticas ideales a las capacidades físicas y lógicas de la consola del recinto, incorporando control remoto opcional cuando hay consolas digitales compatibles.
+*   **Integración de Protocolos:** La versión nativa (Tauri) utiliza **OSC** sobre la red local para comunicarse con consolas (ej. Behringer, Allen & Heath). La versión Web (PWA) utiliza **Web MIDI API** para conexiones USB. *La habilitación de estos protocolos es estrictamente opcional.*
+*   **Gemelo Digital y Medidores (Meters):** El software se suscribe al estado de la consola y a su stream de medidores (Meters). El Asistente sabe en tiempo real qué canales están desmuteados, qué nivel de señal tienen y qué ecualización poseen, contextualizando sus diagnósticos (ej. entendiendo por qué faltan agudos si lee que el High-Cut de la consola está activado).
+*   **Topología e Inventario Manual:** Si no hay telemetría de red, el sistema funciona en modo manual declarando el inventario (Paramétrico, GEQ 31 bandas) y la independencia de buses (EQ Independiente vs Global), guiando al operador para mover los faders físicos.
+*   **Niveles de Autorización (Autopilot vs Copilot):** El sistema nunca altera la consola sin permiso. El usuario puede configurar el nivel de autonomía del sistema:
+    *   *Modo Estricto (Por Defecto):* Requiere que el usuario presione el botón "Aplicar a Consola" para ejecutar cualquier sugerencia de ecualización o ruteo.
+    *   *Modo Semiautomático (Bounded Auto-Pilot):* El usuario permite cambios automáticos pero bajo límites matemáticos. Por ejemplo: *"Permitir al Asistente inyectar filtros Notch automáticos si detecta un acople inminente, pero con un límite máximo de atenuación de -6dB, y requerir aprobación humana para cualquier aumento (boost) de ganancia."*
 
 ### 4.3. Asistente Guiado de Calibración (Arquitectura Híbrida "Centauro")
 El flujo de calibración utiliza un modelo de responsabilidad dividida, donde el cálculo matemático y la asistencia semántica operan en tándem para garantizar seguridad acústica y usabilidad.
@@ -214,6 +217,15 @@ Sea $X(k, n)$ la magnitud del bin $k$ en el frame $n$. Se declara un precursor d
     $$ \Delta X = X(k, n) - X(k, n-1) > \theta_{growth} $$
 2.  **Tonalidad Aislada:** La energía supera el promedio de su vecindad espectral (ancho de ventana $W$).
     $$ X(k, n) > \frac{1}{2W+1} \sum_{i=k-W}^{k+W} X(i, n) + \theta_{prominence} $$
+
+#### 4.6.2. Monitoreo Dinámico y Auditoría Dirigida (Telemetría de Solo)
+En eventos de voz hablada (conferencias, paneles, corporativos), no se realiza un monitoreo intrusivo constante. El "Modo Centinela" optimiza el uso del bus de monitoreo de la consola trabajando en dos etapas:
+*   **Monitoreo Pasivo (Main Mix):** El sistema escucha pasivamente la salida principal (Main LR) a través de la interfaz de la PC. Mientras la mezcla esté limpia, el Asistente no interfiere ni utiliza el bus de *Solo/PFL*, dejándolo libre para el operador.
+*   **Triage Dirigido (Interrogación Activa):** Si el motor DSP detecta una anomalía en la salida principal (ej. un acople latente o zumbido), el Asistente entra en acción:
+    1.  Lee por OSC el estado de los canales (Mutes y Faders) para identificar cuáles están "abiertos" en ese instante.
+    2.  Toma control temporal del bus de *Solo* (PFL/AFL).
+    3.  Recorre a alta velocidad *únicamente* los canales sospechosos o abiertos, aislando su huella acústica.
+    4.  Una vez identificado el origen exacto del problema (ej. el Micrófono 3 del panel de invitados), libera el bus de Solo y lanza el *Smart Toast* al operador con la solución sugerida.
 
 ### 4.7. Diagnóstico Proactivo (El Copiloto Acústico)
 Auditoría continua y no intrusiva del evento en vivo.
