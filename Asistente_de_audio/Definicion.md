@@ -73,6 +73,23 @@ Para nutrir el motor heurístico (Fast-Rail) y semántico (Semantic-Rail), el si
 
 *   **Extracción Perceptual Pre-calculada:** En lugar de desarrollar algoritmos complejos sobre transformadas de Fourier crudas desde cero, el sistema aprovechará los descriptores nativos de Meyda, tales como Coeficientes Cepstrales en las Frecuencias de Mel (MFCC), *Spectral Flatness* (Planitud Espectral), *Spectral Roll-off* y *ZCR (Zero-Crossing Rate)*.
 
+### 2.4. Estrategia de Despliegue Dual (Monorepo Web / Nativo)
+El proyecto adopta una filosofía de *Single Codebase, Multiple Targets* mediante la integración de **Svelte 5** y **Tauri**. Esto permite desarrollar la aplicación en paralelo para dos plataformas distintas sin duplicar el código de la interfaz gráfica ni la lógica de negocio, resolviendo el dilema entre accesibilidad web universal y rendimiento de hardware crudo.
+
+*   **Salida 1: Progressive Web App (PWA) Universal**
+    *   *Objetivo:* Accesibilidad inmediata. Cualquier técnico puede abrir la herramienta en segundos desde un teléfono, tablet o laptop sin instalar nada, manteniendo soporte offline completo tras la primera carga.
+    *   *Limitación Conocida:* Restringida por la seguridad del navegador (dependencia de Web Audio API y drivers de audio genéricos del sistema operativo).
+*   **Salida 2: Ejecutable Nativo de Escritorio (Windows `.exe` / macOS)**
+    *   *Objetivo:* Rendimiento de Grado Profesional. Enfocado en los ingenieros de sistemas.
+    *   *Arquitectura:* Tauri empaqueta la UI web utilizando el motor nativo del OS (WebView2), pero inyecta un *backend en Rust* con acceso profundo al sistema operativo.
+    *   *Desbloqueos Críticos:*
+        1.  **Audio ASIO (Latencia Cero):** El backend en Rust se salta el navegador web y se comunica directamente con los drivers ASIO/CoreAudio, permitiendo ruteo multicanal simultáneo y latencia casi nula para el análisis FFT.
+        2.  **Archivos Nativos:** Lectura y escritura invisible de archivos pesados (modelos GLL, *Snapshots*, *Payloads* de la sala) directo en el disco, sin ventanas emergentes de "Descarga".
+        3.  **Hardware Libre:** El motor RAG y el LLM acceden a la VRAM y RAM sin las cuotas restrictivas que imponen navegadores como Chrome.
+
+**Patrón de Abstracción de Hardware (HAL)**
+Para lograr el desarrollo en paralelo sin dividir el código, el sistema implementará una capa de abstracción. Cuando la lógica central demande escuchar el micrófono, no llamará a una API específica, sino al HAL. El HAL evaluará el entorno: si corre en la web, invocará al `Web Audio API`; si corre dentro de Tauri, solicitará el *buffer* crudo de audio al backend en Rust. El motor de análisis matemático DSP recibe la misma información sin importarle el origen.
+
 ---
 
 ## 3. Arquitectura de Interfaz y Etapas Operativas
@@ -213,8 +230,13 @@ Auditoría continua y no intrusiva del evento en vivo.
     5.  *Efecto Caja:* Desbalance en los primeros coeficientes MFCC (Exceso en 300-500 Hz). `Texto: "💡 Voz encajonada. Sugerencia: Corte paramétrico de -4dB en {Hz}."`
 *   **Carril Semántico (Semantic-Rail):** Ejecutado por el LLM local para diagnósticos complejos bajo demanda ("¿Por qué la voz se escucha nasal solo al fondo?"). SLA de latencia: < 4 segundos. *Nota: Las sugerencias emitidas aquí son filtradas por el Nivel de Restricción Administrativo declarado en la Fase de Planificación.*
 
-#### 4.7.2. Triage y Troubleshooting de Hardware Básico (Pre-Vuelo)
-Un problema común es que usuarios novatos intentan diagnosticar problemas físicos obvios con ecualización. Antes de sugerir ajustes de DSP, el sistema ejecuta un diagnóstico híbrido (físico/algorítmico) para descartar fallas eléctricas o de ruteo.
+#### 4.7.2. Triage y Asistente de Ruteo Físico (Pre-Vuelo)
+Un problema común es que usuarios novatos intentan diagnosticar problemas físicos obvios con ecualización, o se frustran por limitaciones de hardware (falta de placas de sonido dedicadas). Antes de sugerir ajustes de DSP, el sistema ejecuta un diagnóstico híbrido (físico/algorítmico) y un "Onboarding" de hardware para descartar fallas eléctricas o de ruteo:
+
+*   **Asistente de Ruteo Físico (Hardware Workarounds):** El sistema consulta qué equipamiento físico posee el usuario para la medición y lo guía paso a paso con esquemas de conexión:
+    *   *Escenario A (Solo PC + Consola):* El Asistente enseña el "Workaround de Consola": Guía al usuario a conectar el micrófono de medición a un canal de la consola física (para usar su *Phantom Power*), enviar esa señal a un *Auxiliar*, y conectar el *Auxiliar* a la entrada de micrófono de la PC. Le instruirá explícitamente usar el volumen del Auxiliar como atenuador para evitar distorsiones en la placa de la PC.
+    *   *Alerta de Feedback de Ruteo:* Al usar el escenario A, el sistema advierte proactivamente al usuario de no rutear la entrada de la PC (Ruido Rosa) hacia el mismo bus Auxiliar de captura para evitar un bucle de retroalimentación eléctrico masivo.
+*   **Test de Bucle de Hardware (Loopback Calibration):** Para asegurar la integridad de la medición frente a alteraciones del Sistema Operativo (ej. "Mejoras de Audio" de Windows) o de la consola, el sistema solicita un test de bucle físico. El usuario conecta la salida directamente a la entrada. Si el motor detecta que la respuesta de magnitud excede una varianza de $\pm 1 \text{ dB}$, diagnostica "Coloración del Sistema" y detiene la calibración hasta que se desactiven los efectos.
 *   **Auto-detección mediante análisis:** Si el motor DSP detecta anomalías matemáticas extremas que no corresponden a acústica de sala, bloquea temporalmente el flujo de ecualización y lanza una alerta de hardware. Por ejemplo:
     ```javascript
     // Auto-detectar anomalías mediante análisis
