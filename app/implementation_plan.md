@@ -990,7 +990,7 @@ Valor: <slug_config_activa>
 Metadatos: {
   "configs": [
     {"id": "default", "nombre": "Principal", "hoja": "3_Conexiones", "creada": 1714..., "autor": "..."},
-    {"id": "reunion", "nombre": "Reunión", "hoja": "3_Conexiones_reunion", ...},
+    {"id": "reunion", "nombre": "Reunión", "hoja": "3_Conexiones_reunion", "ubicaciones_override": {"MIC-01": "Escenario", "EQ-05": "FOH"}, ...},
     {"id": "exterior", "nombre": "Evento Exterior", "hoja": "3_Conexiones_exterior", ...}
   ]
 }
@@ -1081,6 +1081,8 @@ Si es la vigente no se muestra nada (o se muestra con ★). Si es otra configura
 #### [MODIFY] [app.js](file:///c:/Users/Abel/Documents/circuito/entrerios2.github.io/app.js)
 
 - `fetchData()` lee parámetro URL `config` y lo pasa a `doGet()`. Sin parámetro → config vigente
+- **Override de Ubicaciones:** Nueva función `getUbicacionEfectiva(equipoId)` que retorna el override de la configuración activa (si existe en `4_Configuracion`) o la ubicación de almacenaje base (`1_Equipos`). Reemplazar lecturas directas de `equipo.Ubicacion` por esta función en la UI y topología.
+- Al editar la ubicación de un equipo bajo una configuración cargada, guardar en `ubicaciones_override` de esa configuración para no ensuciar el inventario.
 - `db.configActual` almacena el slug de la configuración cargada
 - `db.configVigente` almacena el slug de la configuración vigente (del registro de control)
 - Si `configActual !== configVigente` → muestra banner de configuración no vigente
