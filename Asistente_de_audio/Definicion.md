@@ -313,6 +313,31 @@ El sistema está diseñado para ser operado tanto por personas sin background t�
 *   **Detector de Técnica de Micrófono (Conciencia Espacial):** El motor DSP diferencia acústicamente el uso del micrófono (ej. Micrófono en jirafa/atril frente a Micrófono de mano) mediante la variabilidad de bajas frecuencias (efecto proximidad), caídas temporales de agudos (fuera de eje) o incrementos nasales (orador tapando la cápsula).
     *   *Resolución de Técnica Deficiente:* Si el sistema advierte una mala técnica y resulta imposible ajustar la posición física (orador inmanejable), proveerá al usuario de un modo alternativo ("Workarounds"). Por ejemplo, si es un orador de atril muy alejado, sugerirá abandonar la "búsqueda de ecualización plana" y pasará a sugerir el uso de una Puerta de Ruido / Expansor, compresión con ratio suave para compensar la caída de señal, y un filtro pasa-altos mucho más agresivo para maximizar la inteligibilidad sacrificando calidad natural.
 
+### 4.11. Guía de Audio y Video
+Para optimizar el rol del Asistente durante el evento en vivo, el sistema permite cargar el programa detallado. Al cruzar el itinerario temporal con la telemetría de la consola, el Asistente adquiere "conciencia" de lo que debería estar ocurriendo, actuando como un apuntador inteligente y un monitor de seguridad preventivo.
+
+*   **Ingesta de Datos y Estructura JSON:** El sistema incluirá una interfaz de carga nativa donde el usuario puede construir el itinerario. Los datos se persisten en un formato JSON estructurado que desglosa el evento en bloques y secciones específicas:
+    ```json
+    {
+      "orden": 1,
+      "titulo": "Apertura",
+      "orador": "Juan Perez",
+      "hora": "10:00",
+      "duracion_m": 20,
+      "secciones": [
+        { "tipo": "hablado", "mics": ["atril"], "duracion_m": 5 },
+        { "tipo": "video", "duracion_m": 2 },
+        { "tipo": "entrevista", "mics": ["atril-mano", "derecha-mano"], "duracion_m": 13 }
+      ]
+    }
+    ```
+*   **Navegación e Interfaz de Operación:** Durante el evento, la interfaz se comporta como un programa de seguimiento. Presenta una línea de tiempo (*Timeline*) con un cronómetro que marca el tiempo desarrollado de la parte actual y visualiza claramente lo que sigue en el programa, avisando cuando se acerca una nueva sección.
+    *   *Avance Manual:* Aunque el reloj muestre el progreso, el usuario tiene la capacidad de navegar la guía manualmente (mediante un botón de "Siguiente Parte") para sincronizarse si el evento real sufre variaciones respecto al cronograma teórico.
+*   **Reglas de Intervención Proactiva:**
+    *   **Alertas de Ruteo/Muteo:** Si la guía marca que la sección actual es "hablado" usando el micrófono "atril", pero el Asistente lee por telemetría que dicho canal recibe audio acústico y está *Muteado* en la consola (o viceversa, si micrófonos de mano están desmuteados innecesariamente), el sistema lanza una advertencia visual para corregir el error.
+    *   **Suspensión Inteligente del AFE:** Cuando la guía marca una sección tipo `"video"`, el sistema asume la entrada de energía acústica musical/efectos y suspende temporalmente los algoritmos de Prevención de Acoples (AFE) para evitar falsas alarmas de retroalimentación.
+    *   **Aplicación Opcional de Perfiles de Voz:** Si en la carga del programa se definió de antemano el perfil del orador, el sistema mostrará la sugerencia de cargar ese EQ. Adicionalmente, el sistema ofrecerá una configuración donde la **aplicación automática de este perfil de voz queda a criterio y autorización explícita del usuario** (pudiendo permitir que el Asistente lo inyecte por sí solo al avanzar de sección).
+
 ---
 
 ## 5. Flujo de Datos Híbrido (Data Pipeline)
